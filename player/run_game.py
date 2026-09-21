@@ -350,6 +350,15 @@ def main():
                     help="press a key: NAME@FRAME, e.g. escape@40 or space@90")
     ap.add_argument("--subtitles", action="store_true",
                     help="show the dialogue text (the game defaults it off)")
+    rec = ap.add_argument_group(
+        "record and replay", "a replay makes the same engine calls as the "
+        "session it recorded, so two traces can be compared call by call")
+    rec.add_argument("--record", metavar="FILE",
+                     help="save this session's input, timing and random seed")
+    rec.add_argument("--replay", metavar="FILE",
+                     help="play a recorded session back, unattended")
+    rec.add_argument("--headless", action="store_true",
+                     help="no window and no sound -- for replays and traces")
     view = ap.add_argument_group(
         "display", "remembered between runs; in game F11 or Alt+Enter toggles "
                    "fullscreen, F10 integer scaling, F12 smoothing")
@@ -430,6 +439,26 @@ def main():
     import display
     display.configure(fullscreen=args.fullscreen, integer=args.integer,
                       smooth=args.smooth, scale=args.scale)
+    if args.headless:
+        os.environ["SDL_VIDEODRIVER"] = "dummy"
+        os.environ["SDL_AUDIODRIVER"] = "dummy"
+    # Record and replay take over the clock and the random seed, so they
+    # start before any game code runs.  A replay starts the session the way
+    # its recording did.
+    import replay
+    if args.record and args.replay:
+        sys.exit("--record and --replay: pick one")
+    if args.replay:
+        started = replay.start_replay(os.path.abspath(args.replay))
+        args.scene = started.get("scene")
+        args.skip_video = started.get("skip_video", False)
+        args.subtitles = started.get("subtitles", False)
+        args.frames = started.get("frames", 0)
+    elif args.record:
+        replay.start_recording(os.path.abspath(args.record), scene=args.scene,
+                               skip_video=bool(args.skip_video),
+                               subtitles=bool(args.subtitles),
+                               frames=args.frames or 0)
     _stub.FRAME_LIMIT = args.frames
     _stub.SCREENSHOT = os.path.abspath(args.screenshot) if args.screenshot else None
     _stub.SKIP_VIDEO = args.skip_video
@@ -510,6 +539,7 @@ def main():
         sys.stdout, sys.stderr = real_stdout, real_stderr
         # Only now: the game's Release() runs after the loop and still uses
         # the mixer, so tearing pygame down any earlier breaks it.
+        replay.close()
         try:
             import yagasound, yagagraphics
             yagasound.cleanup()

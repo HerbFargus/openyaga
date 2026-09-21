@@ -32,6 +32,7 @@ real property so setting it reaches the mixer, and Stub's __setattr__ would
 swallow it.  Unknown attributes still fall back to a stub.
 """
 
+import itertools
 import os
 import sys
 import tempfile
@@ -86,8 +87,19 @@ def _temp_music(path, data):
     return name
 
 
+_sequence = itertools.count(1)
+
+
 class ISound(object):
+    # Hashed by creation order, not address: the sound manager keeps its
+    # sounds in a dict keyed by the sound, and iterating that in address
+    # order made a replayed session run their callbacks in a different
+    # order from the recording.
+    def __hash__(self):
+        return object.__getattribute__(self, "_seq")
+
     def __init__(self, res=None):
+        object.__setattr__(self, "_seq", next(_sequence))
         object.__setattr__(self, "_ready", False)
         self.resource = res
         self.path = str(getattr(res, "path", "") or "")
@@ -165,6 +177,9 @@ class ISound(object):
 
     @property
     def isPlaying(self):
+        import replay
+        if replay.active():
+            return self._clock_playing()
         if self.chunk is not None:
             # Busy is not enough: it says the *channel* is playing something.
             # Once this sound ends its channel is free, and the next sound to
@@ -189,8 +204,38 @@ class ISound(object):
             return False
         return bool(pygame.mixer.music.get_busy())
 
+    def _length(self):
+        """Seconds, from the data itself -- the sound card is not asked."""
+        known = object.__getattribute__(self, "__dict__").get("_known_length")
+        if known is not None:
+            return known
+        length = None
+        if self.chunk is not None:
+            length = self.chunk.get_length()
+        else:
+            data = getattr(self.resource, "data", None)
+            if data:
+                length = (mp3.length(data) if self.is_mp3
+                          else mp3.wav_length(data))
+        length = length or 0.0
+        object.__setattr__(self, "_known_length", length)
+        return length
+
+    def _clock_playing(self):
+        """Under record and replay: playing until its length has passed on
+        the virtual clock, unless stopped or, for music, replaced.  Asking the
+        mixer instead would make the answer depend on real time, and a replay
+        would drift from its recording the first time a line ended a frame
+        early or late."""
+        if not object.__getattribute__(self, "__dict__").get("_clock_started"):
+            return False
+        if self.is_music and self.chunk is None and _music_owner is not self:
+            return False
+        return time.time() - self._clock_started < self._length()
+
     def Run(self, scene=None, *a, **kw):
         global _music_owner
+        object.__setattr__(self, "_clock_started", time.time())
         if not _ensure_mixer():
             return
         if self.chunk is not None:
@@ -213,6 +258,7 @@ class ISound(object):
 
     def Stop(self, scene=None, *a, **kw):
         global _music_owner
+        object.__setattr__(self, "_clock_started", None)
         if self.chunk is not None:
             # Stop this sound wherever it is playing -- not whatever has since
             # taken the channel it started on.

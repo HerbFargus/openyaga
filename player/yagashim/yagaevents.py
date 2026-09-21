@@ -395,8 +395,20 @@ class EventManager(_stub.Stub):
 
         Mouse motion arrives as two separate axis events carrying the
         coordinate in `value`; that is how cursor.CCursor tracks the pointer.
+
+        Everything the game will receive is collected first, as plain
+        [class, type, elementID, value] lists, so that a recording can save
+        exactly that and a replay can hand back exactly that (replay.py).
+        The window's own business -- closing, resizing, the display keys --
+        never reaches the game and is not recorded.
         """
         import display
+        import replay
+        live = []
+
+        def emit(cls, kind, element=0, value=0):
+            live.append([cls, kind, element, value])
+
         for ev in pygame.event.get():
             if ev.type == pygame.QUIT:
                 # Closing the window is how to quit.  Escape belongs to the
@@ -412,23 +424,21 @@ class EventManager(_stub.Stub):
                 if ev.type == pygame.KEYDOWN:
                     display.toggle(_display_key(ev))
                 continue
+            if replay.mode == "replay":
+                continue            # the recording is the input now
             if ev.type == pygame.MOUSEMOTION:
                 # The window may be any size; the game lives in 640x480.
                 pos = ev.pos if getattr(ev, "test", False) else display.to_game(ev.pos)
-                self._dispatch(Event(EEventClass.CLASS_MOUSE,
-                                     EInputEvent.IEVENT_AXIS_POS_X, value=pos[0]))
-                self._dispatch(Event(EEventClass.CLASS_MOUSE,
-                                     EInputEvent.IEVENT_AXIS_POS_Y, value=pos[1]))
+                emit(EEventClass.CLASS_MOUSE, EInputEvent.IEVENT_AXIS_POS_X, value=pos[0])
+                emit(EEventClass.CLASS_MOUSE, EInputEvent.IEVENT_AXIS_POS_Y, value=pos[1])
             elif ev.type in (pygame.MOUSEBUTTONDOWN, pygame.KEYDOWN):
-                import yagasprite
-                yagasprite.skip_videos()
+                live.append("skip-video")
             if ev.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
                 kind = (EInputEvent.IEVENT_BUTTON_DOWN
                         if ev.type == pygame.MOUSEBUTTONDOWN
                         else EInputEvent.IEVENT_BUTTON_UP)
-                self._dispatch(Event(EEventClass.CLASS_MOUSE, kind,
-                                     elementID=ev.button - 1,
-                                     value=int(ev.type == pygame.MOUSEBUTTONDOWN)))
+                emit(EEventClass.CLASS_MOUSE, kind, ev.button - 1,
+                     int(ev.type == pygame.MOUSEBUTTONDOWN))
             elif ev.type in (pygame.KEYDOWN, pygame.KEYUP):
                 # The keyboard source is set up with IFLAGS_RAW_BUTTONS +
                 # IFLAGS_TRANSLATE_BUTTONS, so the game gets both: raw
@@ -439,14 +449,20 @@ class EventManager(_stub.Stub):
                 if raw is not None:
                     kind = (EInputEvent.IEVENT_BUTTON_DOWN if ev.type == pygame.KEYDOWN
                             else EInputEvent.IEVENT_BUTTON_UP)
-                    self._dispatch(Event(EEventClass.CLASS_KEYBOARD, kind,
-                                         elementID=raw, value=1))
+                    emit(EEventClass.CLASS_KEYBOARD, kind, raw, 1)
                 if ev.type == pygame.KEYDOWN:
                     typed = _translated_code(ev)
                     if typed is not None:
-                        self._dispatch(Event(EEventClass.CLASS_KEYBOARD,
-                                             EInputEvent.IEVENT_BUTTON_PRESS,
-                                             elementID=typed, value=1))
+                        emit(EEventClass.CLASS_KEYBOARD,
+                             EInputEvent.IEVENT_BUTTON_PRESS, typed, 1)
+
+        for item in replay.frame_inputs(live):
+            if item == "skip-video":
+                import yagasprite
+                yagasprite.skip_videos()
+            else:
+                cls, kind, element, value = item
+                self._dispatch(Event(cls, kind, value=value, elementID=element))
 
     # -- the loop ----------------------------------------------------------
     def StartEventLoop(self):
@@ -465,7 +481,9 @@ class EventManager(_stub.Stub):
         clock = pygame.time.Clock()
         tick = Event(EEventClass.CLASS_TIMER, ETimerEvent.TIMER_TICK)
 
+        import replay
         while self._running:
+            replay.begin_frame()
             self._inject_test_hover()
             self._inject_test_click()
             self._inject_test_keys()
@@ -507,7 +525,15 @@ class EventManager(_stub.Stub):
                 _stub.LOG.record("call", "yagaevents.EventManager.StartEventLoop",
                                  "stopping after %d frames" % self.frames)
                 self._running = False
-            clock.tick(self.maxLoopFrequency or 30)
+            elif replay.finished():
+                # Out of recording before any frame limit: the session was
+                # ended by closing the window, which is not recorded.
+                _stub.LOG.record("call", "yagaevents.EventManager.StartEventLoop",
+                                 "replay finished after %d frames" % self.frames)
+                self._running = False
+            if replay.mode != "replay":
+                # A replay runs flat out: its time comes from the recording.
+                clock.tick(self.maxLoopFrequency or 30)
 
         # Shutdown happens in run_game, after the game's own Release() has
         # run: it still stops sounds once the loop returns.

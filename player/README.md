@@ -219,6 +219,46 @@ Useful while developing:
 
 Everything the game asks of the engine is written to `trace.log`.
 
+## Recording and replaying: the trace as an oracle
+
+Every run writes `trace.log`, one line per engine call the game makes -- what
+it created, set, called and loaded, in order. A recording makes that trace
+reproducible:
+
+```bash
+C:\Python27\python.exe run_game.py --record session.oyr
+C:\Python27\python.exe run_game.py --replay session.oyr --headless
+python compare_traces.py trace_of_recording.log trace_of_replay.log
+```
+
+A replay makes exactly the same engine calls as the session it recorded --
+checked on a 1,500-frame session from boot, through the intro movies, music,
+dialogue and clicks: 75,598 trace lines, identical, and identical again on a
+second replay. `--headless` runs with no window and no sound.
+
+That is what makes the trace useful to anyone reimplementing the engine. Replay
+the same recording in another engine, log the same calls, and
+`compare_traces.py` shows the first place the two disagree.
+
+A recording (`yagashim/replay.py`) holds what the game depends on:
+
+- **input**, as the engine events the game's input manager receives --
+  `[class, type, elementID, value]` per event, per frame -- so a recording
+  does not depend on SDL, pygame or the window size;
+- **time**: `time.time` and `time.clock` become one virtual clock, advanced
+  per frame by the recorded step, which covers animation, lipsync, movies and
+  the scripts' own waits;
+- **the random seed**, for the game's `g_Random` and everything else.
+
+Two things the engine decides are made deterministic while recording or
+replaying: whether a sound is still playing is judged from the virtual clock
+and the sound's length rather than asked of the sound card, and sprites at the
+same depth draw in creation order rather than memory-address order (Python 2
+compares objects by address, which changes from run to run).
+
+A replay needs the same install and the same saved games. Start recordings
+with `--scene` to skip the menus, or from boot.
+
 ## How it runs
 
 `yagashim/` stands in for the eleven native modules. Nothing is hand-written per

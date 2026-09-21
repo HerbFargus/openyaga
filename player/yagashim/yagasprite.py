@@ -20,6 +20,7 @@ the trace.
 import random
 import struct
 import sys
+import itertools
 import time
 
 import pygame
@@ -322,10 +323,34 @@ class TalkieList(_stub.Stub):
         return True
 
 
+_sequence = itertools.count(1)
+
+
+def _seq(sprite):
+    return object.__getattribute__(sprite, "__dict__").get("_seq") or id(sprite)
+
+
 class ISprite(_stub.Stub):
     """Base class; the game subclasses this for its own sprite types."""
 
+    # Sprites compare and hash by the order they were made, not by address.
+    # The game's sprite manager draws in `sortList.sort()` order over
+    # (z, sprite) pairs, so two sprites at the same depth are ordered by
+    # comparing the sprites themselves -- in Python 2, by memory address.
+    # Addresses change from run to run, so the drawing order did too, and no
+    # two runs of the same session drew alike.  Creation order is stable,
+    # and usually what address order was in the original anyway, since it
+    # allocated sprites in the order it made them.
+    def __cmp__(self, other):
+        if isinstance(other, ISprite):
+            return cmp(_seq(self), _seq(other))
+        return cmp(id(self), id(other))
+
+    def __hash__(self):
+        return _seq(self)
+
     def __init__(self, name="yagasprite.ISprite"):
+        object.__setattr__(self, "_seq", next(_sequence))
         _stub.Stub.__init__(self, name)
         import yagascene
         self.position = yagascene.Point(0, 0, 0)

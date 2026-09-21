@@ -77,3 +77,77 @@ def decode(path, data, mixer_format=None):
                          "(%s) ffmpeg failed: %s" % (path, err.strip()[:120]))
         return None
     return target
+
+
+# -- lengths -----------------------------------------------------------------
+_BITRATES = {  # (MPEG-1?, layer) -> kbps by index
+    (True, 3): (0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320),
+    (True, 2): (0, 32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384),
+    (True, 1): (0, 32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448),
+    (False, 3): (0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160),
+    (False, 2): (0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160),
+    (False, 1): (0, 32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256),
+}
+_RATES = {3: (44100, 48000, 32000), 2: (22050, 24000, 16000), 0: (11025, 12000, 8000)}
+
+
+def length(data):
+    """Seconds of audio in an MP3, by walking its frames -- right for variable
+    bitrate too, where size/bitrate is not.  None if no frames are found.
+
+    Replay needs it: whether the score is still playing decides when the music
+    manager restarts it, and a replayed session has to decide that from the
+    clock, identically, rather than ask the sound card."""
+    data = bytearray(data)
+    pos, end, seconds, frames = 0, len(data), 0.0, 0
+    if data[:3] == b"ID3" and end > 10:
+        pos = 10 + ((data[6] & 0x7F) << 21 | (data[7] & 0x7F) << 14 |
+                    (data[8] & 0x7F) << 7 | (data[9] & 0x7F))
+    while pos + 4 <= end:
+        if data[pos] != 0xFF or (data[pos + 1] & 0xE0) != 0xE0:
+            pos += 1
+            continue
+        version = (data[pos + 1] >> 3) & 3          # 3 = MPEG-1, 2 = 2, 0 = 2.5
+        layer = 4 - ((data[pos + 1] >> 1) & 3)      # 1, 2 or 3
+        b_index = data[pos + 2] >> 4
+        r_index = (data[pos + 2] >> 2) & 3
+        padding = (data[pos + 2] >> 1) & 1
+        if version == 1 or layer == 4 or b_index in (0, 15) or r_index == 3:
+            pos += 1
+            continue
+        mpeg1 = version == 3
+        bitrate = _BITRATES[(mpeg1, layer)][b_index] * 1000
+        rate = _RATES[version][r_index]
+        if layer == 1:
+            samples = 384
+            size = (12 * bitrate // rate + padding) * 4
+        else:
+            samples = 1152 if (layer == 2 or mpeg1) else 576
+            size = samples // 8 * bitrate // rate + padding
+        if size < 4:
+            pos += 1
+            continue
+        seconds += float(samples) / rate
+        frames += 1
+        pos += size
+    return seconds if frames else None
+
+
+def wav_length(data):
+    """Seconds of audio in a PCM or ADPCM WAV, from its header."""
+    import struct
+    data = bytes(data)
+    if data[:4] != "RIFF" or data[8:12] != "WAVE":
+        return None
+    pos, byte_rate, size = 12, None, None
+    while pos + 8 <= len(data):
+        tag, n = data[pos:pos + 4], struct.unpack("<I", data[pos + 4:pos + 8])[0]
+        if tag == "fmt ":
+            byte_rate = struct.unpack("<I", data[pos + 16:pos + 20])[0]
+        elif tag == "data":
+            size = min(n, len(data) - pos - 8)
+            break
+        pos += 8 + n + (n & 1)
+    if not byte_rate or size is None:
+        return None
+    return float(size) / byte_rate
