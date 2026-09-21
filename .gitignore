@@ -15,6 +15,7 @@
 /*
 
 !.gitignore
+!.gitattributes
 !README.md
 !FORMATS.md
 !XML.md

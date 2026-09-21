@@ -31,7 +31,40 @@ their own installed copy; everything derived from it is written to `gamecache/`
 on their machine and never travels. `gamecache/` is gitignored — keep it that
 way, it holds a reconstruction of the game's copyrighted source.
 
-## Setup (one time, Python 3)
+## Setup on Linux and macOS
+
+One script does everything, inside `player/` and without `sudo`:
+
+```bash
+player/setup.sh "/path/to/Pajama Sam LRS"
+player/play.sh
+```
+
+The folder is an installed copy of the game -- from a Windows install, or a
+Wine prefix (`~/.wine/drive_c/Program Files (x86)/Atari/Pajama Sam LRS`).
+`setup.sh` recovers the scripts (below) in a Python 3 virtualenv, then builds
+the runtime: Python 2.7 with pygame 2.0.3. A `python2.7` on PATH is used if
+there is one (or set `PYTHON27`); otherwise it fetches micromamba, a
+single-file conda installer, and installs a prebuilt Python 2.7 from
+conda-forge. It ends with a short headless run to check the player starts.
+
+| Platform | Status |
+|---|---|
+| Linux x86_64 | prebuilt Python 2.7 and pygame -- the expected path |
+| macOS, Intel | prebuilt Python 2.7 and pygame |
+| macOS, Apple Silicon | the Intel build under Rosetta; neither Python 2.7 nor its pygame exists for arm64 |
+| Linux ARM | Python 2.7 is prebuilt, pygame builds from source (needs the SDL2 dev packages) |
+
+ffmpeg comes from your package manager (`apt install ffmpeg`,
+`brew install ffmpeg`, ...); without it the game runs with silent dialogue
+and black movies. `play.sh` takes every `run_game.py` flag.
+
+The player itself is written to be portable -- resource lookups ignore case
+and slashes, and every import in the game matches its file name exactly -- but
+it has been played on Windows only so far. Reports from Linux and macOS are
+welcome.
+
+## Setup on Windows (one time, Python 3)
 
 ```bash
 pip install uncompyle6

@@ -25,3 +25,6 @@ ffmpeg.exe
 trace-*.log
 .venv-sdl2/
 display.json
+.venv-setup/
+.tools/
+setup-check.log

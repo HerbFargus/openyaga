@@ -36,6 +36,11 @@ _LIKELY = [
     os.path.expanduser(r"~\scoop\shims\ffmpeg.exe"),
     r"C:\Program Files\ffmpeg\bin\ffmpeg.exe",
     r"C:\ffmpeg\bin\ffmpeg.exe",
+    # Homebrew (Apple Silicon, Intel) and the usual Linux places, for when
+    # PATH is thin -- a launcher started outside a login shell, say.
+    "/opt/homebrew/bin/ffmpeg",
+    "/usr/local/bin/ffmpeg",
+    "/usr/bin/ffmpeg",
 ]
 
 _binary = None           # None = not looked for yet, False = not found
