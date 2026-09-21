@@ -65,6 +65,71 @@ def install_hit_probe():
     _u.CursorOverSprite = probe
 
 
+def install_click_probe():
+    """Report what the room saw when a mouse button went down.
+
+    room_manager.DefaultInputHandler walks every interactive object in the
+    room, keeps the ones whose InBounds() is true, and clicks the topmost.
+    A click that does nothing failed at one of those steps, and from outside
+    they are indistinguishable.
+    """
+    import _stub
+    from python_shared.adventure import room_manager as _rm
+    import yagaevents
+    original = _rm.CRoomManager.DefaultInputHandler
+
+    def probe(self, message):
+        import globals as game_globals
+        down = (message.eventClass == yagaevents.EEventClass.CLASS_MOUSE
+                and message.eventType == yagaevents.EInputEvent.IEVENT_BUTTON_DOWN)
+        if down:
+            cursor = game_globals.g_Cursor
+            names, inbounds = [], []
+            for obj in self.interactiveObjects:
+                name = getattr(obj, "debugName", None) or obj.__class__.__name__
+                names.append(name)
+                try:
+                    if obj.InBounds():
+                        inbounds.append("%s@z%s" % (name, obj.position.z))
+                except Exception, exc:
+                    inbounds.append("%s!%s" % (name, type(exc).__name__))
+            _stub.LOG.record("call", "click.DefaultInputHandler",
+                             "cursor=(%s,%s) enabled=%s hourglass=%s item=%s "
+                             "objects=%d hit=%s"
+                             % (cursor.screenX(), cursor.screenY(),
+                                cursor.enabled, cursor.hourglassCursor,
+                                cursor.itemOnCursor, len(names),
+                                inbounds or "none"))
+        return original(self, message)
+
+    _rm.CRoomManager.DefaultInputHandler = probe
+
+    # And the clickpoint instances, which advance their own animation on a
+    # counter rather than through the sprite's clock.
+    from python_shared.adventure import clickpoint as _cp
+    inst_tick = _cp.CClickPointInstance.Tick
+    seen_tick = [0]
+
+    def tick_probe(self):
+        private = lambda n: getattr(self, "_CClickPointInstance__" + n, "?")
+        if seen_tick[0] < 8:
+            seen_tick[0] += 1
+            sprite = private("sprite")
+            try:
+                speed = self.GetTickSpeed()
+            except Exception, exc:
+                speed = "%s: %s" % (type(exc).__name__, exc)
+            _stub.LOG.record("call", "click.InstanceTick",
+                             "onScreen=%s speed=%s animTick=%s frame=%s/%s"
+                             % (private("onScreen"), speed,
+                                private("animationTick"),
+                                getattr(sprite, "currentFrame", "?"),
+                                getattr(sprite, "frameCount", "?")))
+        return inst_tick(self)
+
+    _cp.CClickPointInstance.Tick = tick_probe
+
+
 def _exit_quietly():
     """Leave without running the interpreter's shutdown.
 
@@ -188,6 +253,7 @@ def main():
 
     if args.debug_hit:
         install_hit_probe()
+        _stub.FIRST_FRAME_HOOKS.append(install_click_probe)
 
     real_stdout, real_stderr = sys.stdout, sys.stderr
     sys.argv = ["boot.py"]

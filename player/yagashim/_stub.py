@@ -67,7 +67,12 @@ LOG = TraceLog()
 # Set by run_game.py before the game starts: headless checking options.
 FRAME_LIMIT = 0
 SCREENSHOT = None
-CLICKS = []          # [(frame, x, y)] to inject, for headless testing
+CLICKS = []
+
+# Probes that can only be installed after boot: importing a game module at
+# setup time runs its module body, which reads globals the game has not filled
+# in yet.  The event loop runs these once, just before its first frame.
+FIRST_FRAME_HOOKS = []          # [(frame, x, y)] to inject, for headless testing
 SKIP_VIDEO = False   # treat movies as zero length
 TRACE_STATE = False  # log cursor/pause state each frame
 

@@ -260,6 +260,13 @@ class EventManager(_stub.Stub):
 
         _stub.LOG.record("call", "yagaevents.EventManager.StartEventLoop",
                          "(%d timers)" % len(self._timers))
+        for hook in _stub.FIRST_FRAME_HOOKS:
+            try:
+                hook()
+            except Exception, exc:
+                _stub.LOG.record("call", "hook", "%s: %s" % (type(exc).__name__, exc))
+        del _stub.FIRST_FRAME_HOOKS[:]
+
         self._running = True
         clock = pygame.time.Clock()
         tick = Event(EEventClass.CLASS_TIMER, ETimerEvent.TIMER_TICK)
@@ -286,8 +293,10 @@ class EventManager(_stub.Stub):
                 try:
                     import globals as g
                     _stub.LOG.record('state', 'frame %d' % self.frames,
-                                     'cursor.enabled=%s appPaused=%s scene=%s'
+                                     'enabled=%s paused=%s hourglass=%s itemOnCursor=%s scene=%s'
                                      % (g.g_Cursor.enabled, g.g_AppPaused,
+                                        getattr(g.g_Cursor, "hourglassCursor", "?"),
+                                        getattr(g.g_Cursor, "itemOnCursor", "?"),
                                         g.g_SceneManager.CurrentScene()))
                 except Exception, e:
                     pass

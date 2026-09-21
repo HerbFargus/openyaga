@@ -256,6 +256,12 @@ class ISprite(_stub.Stub):
         self.currentFrame = 0
         self.frameCount = 0
         self.loopCount = 0
+        # How far into the animation we are, and how long it runs.  script.py
+        # waits on `speakerObj.time < speakerObj.duration` to decide a line is
+        # still playing; left as stubs those compare arbitrarily and a script
+        # can wait for ever, which stops the game dead after one interaction.
+        self.time = 0.0
+        self.duration = 0.0
         self.hFlip = 0
         self.vFlip = 0
         self.visible = 1
@@ -271,6 +277,32 @@ class ISprite(_stub.Stub):
         # Not a list: the game sets attributes on it, e.g.
         # `sprite.talkies.continuous = true`.
         self.talkies = TalkieList("%s.talkies" % name)
+
+    def __setattr__(self, name, value):
+        """Keep frameCount in step with the animation.
+
+        The engine exposes an animation's length on the sprite, not on the
+        anim, and the game reads it straight back:
+
+            sprite = yagasprite.Sprite()
+            sprite.anim = self.LoadAnim(path)
+            ...
+            if self.__sprite.currentFrame < self.__sprite.frameCount - 1:
+
+        Left at zero that test is `0 < -1`, so every clickpoint animation
+        ended on its first tick -- the instance hid itself, released the
+        clickpoint and never drew a frame or played a sound.  Rooms looked
+        alive (clicks registered, objects were found) and did nothing.
+        """
+        _stub.Stub.__setattr__(self, name, value)
+        if name == "anim":
+            frames = getattr(value, "frames", None)
+            try:
+                count = len(frames) if frames else 0
+            except TypeError:
+                count = 0
+            _stub.Stub.__setattr__(self, "frameCount", count)
+            _stub.Stub.__setattr__(self, "currentFrame", 0)
 
     def RegisterEventSink(self, sink, *a, **kw):
         sinks = object.__getattribute__(self, "_sinks")
@@ -338,10 +370,14 @@ class ISprite(_stub.Stub):
         fps = getattr(self.anim, "framesPerSecond", 10) or 10
         elapsed = time.time() - (self._started or time.time())
         step = int(elapsed * fps)
+        loops = int(self.loopCount) if self.loopCount else 1
+        self.duration = float(frame_count) / fps * loops
+        self.time = min(elapsed, self.duration)
         if self.loopCount:
             limit = int(self.loopCount) * frame_count
             if step >= limit:
                 self._playing = False
+                self.time = self.duration
                 self.currentFrame = frame_count - 1
                 import yagascene
                 _stub.LOG.record("call", "%s.finished" % self._yaga_name,
