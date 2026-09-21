@@ -75,6 +75,8 @@ def main():
                     help="stop after this many rendered frames")
     ap.add_argument("--screenshot", help="save the last frame here")
     ap.add_argument("--scene", help="start in this scene instead of the logo")
+    ap.add_argument("--skip-video", action="store_true",
+                    help="treat movies as zero length (we cannot draw them)")
     ap.add_argument("--debug-hit", action="store_true",
                     help="log every CursorOverSprite test and which bound failed")
     ap.add_argument("--click", action="append", default=[],
@@ -123,6 +125,7 @@ def main():
     # player's game folder.
     _stub.FRAME_LIMIT = args.frames
     _stub.SCREENSHOT = os.path.abspath(args.screenshot) if args.screenshot else None
+    _stub.SKIP_VIDEO = args.skip_video
     for n, spec in enumerate(args.click):
         coords, _, frame = spec.partition("@")
         x, y = (int(v) for v in coords.split(","))

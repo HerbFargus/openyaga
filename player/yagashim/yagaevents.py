@@ -238,7 +238,10 @@ class EventManager(_stub.Stub):
                                      EInputEvent.IEVENT_AXIS_POS_X, value=ev.pos[0]))
                 self._dispatch(Event(EEventClass.CLASS_MOUSE,
                                      EInputEvent.IEVENT_AXIS_POS_Y, value=ev.pos[1]))
-            elif ev.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
+            elif ev.type in (pygame.MOUSEBUTTONDOWN, pygame.KEYDOWN):
+                import yagasprite
+                yagasprite.skip_videos()
+            if ev.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
                 kind = (EInputEvent.IEVENT_BUTTON_DOWN
                         if ev.type == pygame.MOUSEBUTTONDOWN
                         else EInputEvent.IEVENT_BUTTON_UP)

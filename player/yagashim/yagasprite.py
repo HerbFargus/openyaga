@@ -51,6 +51,7 @@ def _surface_for(layer):
     return surface
 
 _live = []          # every sprite made, so playback does not depend on drawing
+_videos = []        # movies, so a click can cut one short
 
 
 def tick_all():
@@ -108,6 +109,9 @@ class IVideoElement(object):
             if divider:
                 self.fps = float(dividend) / divider
         self.duration = (self.frames / self.fps) if self.fps else 0.0
+        if _stub.SKIP_VIDEO:
+            self.duration = 0.0
+        _videos.append(self)
         _stub.LOG.record("new", "yagasprite.IVideoElement",
                          "(%s) %dx%d, %d frames at %.1f fps = %.1fs"
                          % (self.path, self.width, self.height,
@@ -146,6 +150,24 @@ class IVideoElement(object):
 
     def __repr__(self):
         return "<IVideoElement %s>" % self.path
+
+
+def skip_videos():
+    """End any playing movie immediately.
+
+    We cannot draw Bink, so a movie is a black screen for its real duration --
+    and pj_intro.da2 runs 172 seconds, during which the game is waiting and
+    nothing responds.  A click or a key ends it, which is roughly what the
+    original offered anyway: its cutscenes could be clicked through.
+    """
+    ended = 0
+    for video in list(_videos):
+        if video.isPlaying:
+            video.Stop()
+            ended += 1
+    if ended:
+        _stub.LOG.record("call", "yagasprite.skip_videos", "ended %d" % ended)
+    return ended
 
 
 class SoundList(object):
@@ -436,6 +458,7 @@ _mod.ISprite = ISprite
 _mod.TalkieList = TalkieList
 _mod.SoundList = SoundList
 _mod.tick_all = tick_all
+_mod.skip_videos = skip_videos
 _mod.IVideoElement = IVideoElement
 _mod.Sprite = Sprite
 _mod.TalkieSprite = TalkieSprite

@@ -100,6 +100,12 @@ C:\Python27\python.exe run_game.py
 Opens a 640x480 window and boots the game the way it boots itself: Atari logo,
 Humongous logo, then the first room. Escape or closing the window quits.
 
+**Movies are a black screen.** Bink is not decoded, so a movie occupies its
+real running time with nothing drawn -- and the intro is 172 seconds, during
+which the game is waiting and nothing responds. Click or press a key to cut one
+short, or start with `--skip-video` to treat every movie as zero length, which
+takes you to the bedroom where play actually begins.
+
 | | |
 |---|---|
 | move the mouse | the cursor follows; rolling over things highlights them |
@@ -111,6 +117,7 @@ Useful while developing:
 
 | flag | |
 |---|---|
+| `--skip-video` | movies end instantly; the quickest way into the game |
 | `--scene NAME` | start in a room instead of the logos, e.g. `--scene bedroom` |
 | `--frames N` | stop after N frames instead of running until you quit |
 | `--screenshot F` | save the last frame |

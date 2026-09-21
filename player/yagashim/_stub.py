@@ -68,6 +68,7 @@ LOG = TraceLog()
 FRAME_LIMIT = 0
 SCREENSHOT = None
 CLICKS = []          # [(frame, x, y)] to inject, for headless testing
+SKIP_VIDEO = False   # treat movies as zero length
 
 _MAX_REPR = 40
 
