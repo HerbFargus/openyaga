@@ -1,0 +1,27 @@
+# openyaga -- deny by default.
+#
+# This working folder also holds the game itself, a disc image, a ScummVM
+# checkout and ~600 MB of extracted artwork.  None of that belongs in git, and
+# game-derived source must NEVER be committed, so nothing is tracked unless it
+# is explicitly listed below.  An accidental `git add -A` adds nothing new.
+
+/*
+
+!.gitignore
+!README.md
+!FORMATS.md
+!tools/
+!player/
+
+# Reconstructed game source: a derivative work of the original program.
+# It belongs only on a machine that owns the game.  Never commit it.
+game-source/
+player/gamecache/
+
+# Generated output -- reproducible from tools/, too big to track.
+extracted/
+extracted-cards/
+
+__pycache__/
+*.pyc
+*.pyo
