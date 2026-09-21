@@ -31,3 +31,4 @@ display.json
 .tools/
 setup-check.log
 /ffmpeg
+cache-*/
