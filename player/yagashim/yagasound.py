@@ -70,12 +70,16 @@ def _ensure_mixer():
     return _mixer_ready
 
 
-def _temp_mp3(path, data):
-    """SDL_mixer's music loader wants a real file."""
+def _temp_music(path, data):
+    """SDL_mixer's music loader wants a real file -- with the right
+    extension: the score is mostly MP3, but the dresser climb's four tracks
+    are WAV, and handed a .mp3 name the loader tried to decode PCM as MPEG
+    ("Error reading the stream") and the room played no music."""
     existing = _mp3_cache.get(path)
     if existing and os.path.isfile(existing):
         return existing
-    handle, name = tempfile.mkstemp(suffix=".mp3", prefix="yaga_")
+    suffix = os.path.splitext(path)[1].lower() or ".mp3"
+    handle, name = tempfile.mkstemp(suffix=suffix, prefix="yaga_")
     os.write(handle, data)
     os.close(handle)
     _mp3_cache[path] = name
@@ -196,7 +200,7 @@ class ISound(object):
             if data is None:
                 return
             try:
-                pygame.mixer.music.load(_temp_mp3(self.path, bytes(data)))
+                pygame.mixer.music.load(_temp_music(self.path, bytes(data)))
                 pygame.mixer.music.play()
                 _music_owner = self
                 self._started = time.time()

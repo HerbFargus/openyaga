@@ -35,6 +35,65 @@ from __future__ import annotations
 import re
 
 PATCHES = [
+    # Bugs in the original game, not decompiler mistakes -- the bytecode reads
+    # exactly as the source does.  Each one freezes or kills the game from
+    # ordinary play, so they are fixed rather than reproduced.
+    #
+    # The dresser climb: a jump onto the next section of dresser is sized by
+    # the difference of drawer indices, 1 to 7, but the same slot one section
+    # up (three rows higher) gives 0.  No case matches, jumpType stays
+    # 'static', and CanMove still returns true -- so Sam winds up, Jump2Spin
+    # returns without jumping, and he hangs on the wind-up's last frame with
+    # the cursor off until that far drawer closes under him.  It is not a
+    # legal move anyway (samRow - clickRow is checked for 1, not 3).
+    {
+        "module": "scene_scaling_game",
+        "why": "dresser climb: clicking the same slot one section up froze "
+               "Sam mid-jump",
+        "pattern": re.compile(r"            if diff > 7:\n"
+                              r"                return false\n"),
+        "replacement": ("            if diff > 7 or diff == 0:\n"
+                        "                return false\n"),
+        "expect": 1,
+    },
+    # A room's second preload shows the hourglass, and it can start after
+    # Sam has picked up an item.  Two things then break with the item still
+    # held (itemOnCursor stays true throughout):
+    #  - a click while the hourglass is up goes to the item handler, which
+    #    looks up an inventory item named 'HOURGLASS';
+    #  - clearing the hourglass sets the plain arrow, so the next click
+    #    looks up an item named 'NORMAL'.
+    # Either is a KeyError that ends the game.  Seen entering Soda Swamp
+    # with the peanut.  Mouse input is already ignored under the hourglass
+    # when no item is held (DefaultInputHandler); do the same with one, and
+    # give the item's cursor back afterwards.
+    {
+        "module": "python_shared/adventure/room_manager",
+        "why": "a click under the hourglass with an item held crashed",
+        "pattern": re.compile(
+            r"        if globals\.g_Cursor\.itemOnCursor and self\.ItemOnCursorInputHandler:\n"
+            r"            self\.ItemOnCursorInputHandler\(message\)\n"),
+        "replacement": (
+            "        if globals.g_Cursor.itemOnCursor and self.ItemOnCursorInputHandler:\n"
+            "            if not globals.g_Cursor.hourglassCursor:\n"
+            "                self.ItemOnCursorInputHandler(message)\n"),
+        "expect": 1,
+    },
+    {
+        "module": "python_shared/adventure/cursor",
+        "why": "clearing the hourglass dropped a held item's cursor, and "
+               "the next click crashed",
+        "pattern": re.compile(
+            r"        self\.hourglassCursor = false\n"
+            r"        self\.ChangeCursor\('NORMAL'\)\n"),
+        "replacement": (
+            "        self.hourglassCursor = false\n"
+            "        if self.itemOnCursor and self.currentItemObj:\n"
+            "            self.ChangeCursor(None, self.currentItemObj.name)\n"
+            "        else:\n"
+            "            self.ChangeCursor('NORMAL')\n"),
+        "expect": 1,
+    },
     # Not a decompiler mistake: the bytecode really does build an empty list.
     # But every other use of preloadHandles is a dict -- has_key, item
     # assignment, .values() -- and PreloadForRoom itself resets it to {}.  The
