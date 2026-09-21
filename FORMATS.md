@@ -252,10 +252,16 @@ Two loose ends, both real:
   the game: a mouth shape cut from the art but left in the tracks. Those
   events draw no mouth.
 
+## The XML data
+
+The 137 XML documents — room layouts, menus, the inventory, and the 217 KB
+dialogue script with its subtitle text — are written up separately in
+[XML.md](XML.md).
+
 ## Not yet reversed
 
-- The **`.xml` schema**. The files are plain text and readable as-is, but the
-  scene/inventory structure and the 212 KB master script are not documented
-  here.
+Nothing in the shipped data is unaccounted for. What is left is coverage
+rather than format work: the player has been driven through one game's
+opening, not played to the end.
 - The Python 2.2 game scripts are inside the executable, not on the disc; see
   `player/README.md` for how they are recovered.

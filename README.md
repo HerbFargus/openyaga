@@ -31,8 +31,11 @@ python tools/yaga_extract.py sprites --pattern "bedroom/*" --formats frames,shee
 
 **`FORMATS.md` — the format documentation.**
 
-Containers, both sprite codecs, the lipsync/phoneme system, and the quirks in
-the shipped data that break naive decoders.
+Containers, both sprite codecs, the lipsync/phoneme system, the `.evb` event
+streams, and the quirks in the shipped data that break naive decoders.
+[XML.md](XML.md) covers the data files: room layouts, menus, the inventory,
+and the dialogue script — which carries the full subtitle text for all 1,212
+spoken lines.
 
 ## What doesn't work yet
 
@@ -52,8 +55,9 @@ Characters lip-sync to their dialogue and animations fire their own sound
 effects: the `.evb` event streams are read in [FORMATS.md](FORMATS.md), which
 linyaga lists as its one missing feature.
 
-Not yet: subtitles. Expect rough edges — this has been driven through one
-game's opening, not played to the end.
+Not yet: subtitles on screen, though the text for every line is in the script
+XML. Expect rough edges — this has been driven through one game's opening, not
+played to the end.
 
 See [player/README.md](player/README.md) for the design and next steps.
 
