@@ -55,7 +55,7 @@ def load_settings():
             saved = json.load(fh)
         for key in settings:
             if key in saved:
-                settings[key] = saved[key]
+                settings[key] = int(saved[key]) if key == "scale" else bool(saved[key])
     except (IOError, OSError, ValueError):
         pass
     settings.update(_overrides)
@@ -64,7 +64,11 @@ def load_settings():
 def save_settings():
     try:
         with open(_SETTINGS_PATH, "w") as fh:
-            json.dump(dict((k, settings[k]) for k in ("fullscreen", "integer", "smooth")),
+            # Numbers, not booleans: the game's boot.py sets __builtin__.False
+            # = 0, so json's `o is False` test fails and it writes False --
+            # which is not JSON, and the next run could not read its settings.
+            json.dump(dict((k, int(bool(settings[k])))
+                           for k in ("fullscreen", "integer", "smooth")),
                       fh, indent=1, sort_keys=True)
     except (IOError, OSError):
         pass
@@ -231,7 +235,10 @@ def _apply_cursor():
     size, hotspot, data, mask = _cursor
     if k > 1:
         size, hotspot, data, mask = scale_mono_cursor(size, hotspot, data, mask, k)
-    pygame.mouse.set_cursor(size, hotspot, data, mask)
+    try:
+        pygame.mouse.set_cursor(size, hotspot, data, mask)
+    except pygame.error:
+        return          # no cursor support (a headless test driver)
     _cursor_scale = k
 
 
