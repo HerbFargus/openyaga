@@ -237,6 +237,9 @@ class ISprite(_stub.Stub):
         self.hFlip = 0
         self.vFlip = 0
         self.visible = 1
+        # The engine blends sprites by opacity; CActiveSprite reads it back
+        # straight after construction, so it has to exist and be a number.
+        self.opacity = 1.0
         self._playing = False
         self._started = None
         self._anim_id = None
@@ -377,8 +380,23 @@ class ISprite(_stub.Stub):
             if layer.mask and not (layer.mask & PHONEME_REST):
                 continue
             lx, ly = ox + layer.x, oy + layer.y
-            surface.blit(_surface_for(layer), (lx, ly))
+            image = _surface_for(layer)
+            try:
+                opacity = float(self.opacity)
+            except (TypeError, ValueError):
+                opacity = 1.0
+            if opacity < 0.999:
+                # set_alpha is ignored on a per-pixel-alpha surface in SDL 1,
+                # so scale the alpha channel itself.
+                image = image.copy()
+                level = max(0, min(255, int(opacity * 255)))
+                image.fill((255, 255, 255, level), None, pygame.BLEND_RGBA_MULT)
+            surface.blit(image, (lx, ly))
             self._drawn.append((layer, lx, ly))
+            if opacity < 0.999:
+                _stub.LOG.record("call", "yagasprite.blend",
+                                 "(%s at %.2f opacity)"
+                                 % (getattr(self.anim, "locator", "?"), opacity))
             drawn += 1
         if self._drawn:
             import yagascene
