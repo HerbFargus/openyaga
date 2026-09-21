@@ -76,7 +76,12 @@ def originals(pyc_dir):
     except ImportError:
         sys.exit("needs xdis (comes with uncompyle6): pip install uncompyle6")
 
-    def walk(co, path, out):
+    def walk(co, path, out, docs=None):
+        if docs is not None:
+            first = co.co_consts[0] if co.co_consts else None
+            if isinstance(first, (bytes, bytearray)):
+                first = bytes(first).decode("latin-1")
+            docs[path] = first if isinstance(first, str) else None
         strings = []
         for c in co.co_consts:
             if isinstance(c, (bytes, bytearray)):
@@ -86,9 +91,9 @@ def originals(pyc_dir):
         out.setdefault(path, []).extend(strings)
         for c in co.co_consts:
             if hasattr(c, "co_name"):
-                walk(c, path + "/" + c.co_name, out)
+                walk(c, path + "/" + c.co_name, out, docs)
 
-    result = {}
+    result, alldocs = {}, {}
     for dirpath, _dirs, files in os.walk(pyc_dir):
         for f in sorted(files):
             if not f.endswith(".pyc"):
@@ -100,10 +105,11 @@ def originals(pyc_dir):
             except Exception as exc:
                 result[rel] = {"__error__": str(exc)}
                 continue
-            out = {}
-            walk(code, "", out)
+            out, docs = {}, {}
+            walk(code, "", out, docs)
             result[rel] = out
-    return result
+            alldocs[rel] = docs
+    return result, alldocs
 
 
 def recovered(src_dir, python2):
@@ -138,9 +144,30 @@ def main():
         sys.exit("no prepared game at %s -- run setup_game.py first" % args.cache)
 
     print("reading original bytecode...")
-    orig = originals(pyc_dir)
+    orig, docs = originals(pyc_dir)
     print("recompiling recovered source under Python 2...")
     recov = recovered(src_dir, args.python2)
+
+    # Modules PyInstaller bundled from the Python 2.2 standard library, as
+    # opposed to the game's own code.  Both are checked, but only the game's
+    # matter for correctness of the player.
+    STDLIB = set("""ConfigParser UserDict __future__ codecs copy copy_reg dospath
+        getopt linecache macpath ntpath os popen2 posixpath pre random re repr sre
+        sre_compile sre_constants sre_parse stat string tempfile traceback types""".split())
+
+    def is_stdlib(module):
+        return module.split("/")[0] in STDLIB or module.startswith(("encodings/", "_boot/"))
+
+    def classify(lost, extra, doc):
+        """What kind of difference is this?"""
+        if lost and not extra and all(s == doc for s in lost):
+            return "docstring"
+        if not lost and extra:
+            return "extra"
+        if lost and all(isinstance(s, str) and len(s) < 64 and chr(10) not in s
+                        for s in lost):
+            return "DATA"          # short identifier-like strings went missing
+        return "text"              # prose: messages, docstrings of inner scopes
 
     bad, checked, missing = [], 0, 0
     for module, funcs in sorted(orig.items()):
@@ -156,23 +183,60 @@ def main():
             a, b = sorted(strings), sorted(other.get(path, []))
             if a != b:
                 lost = [s for s in a if s not in b]
-                bad.append((module, path or "<module>", lost, b))
+                extra = [s for s in b if s not in a]
+                kind = classify(lost, extra, docs.get(module, {}).get(path))
+                bad.append((module, path or "<module>", lost, kind,
+                            "stdlib" if is_stdlib(module) else "game"))
 
     print()
     print("functions checked : %d" % checked)
     print("modules missing   : %d" % missing)
     print("MISMATCHES        : %d" % len(bad))
-    for module, path, lost, got in bad[:args.show]:
+    print()
+
+    counts = {}
+    for _m, _p, _l, kind, origin in bad:
+        counts[(origin, kind)] = counts.get((origin, kind), 0) + 1
+    print("   %-8s %-10s %s" % ("origin", "kind", "count"))
+    for (origin, kind), n in sorted(counts.items()):
+        print("   %-8s %-10s %d" % (origin, kind, n))
+
+    # A second, separate failure: Python 2 list comprehensions accumulate into
+    # a temporary named `_[1]`.  When uncompyle6 cannot reconstruct the
+    # comprehension it emits that raw name, losing the element expression --
+    # `[_[1] for vector in vectors]` was `[vector[0] for vector in vectors]`.
+    # No strings go missing, so the comparison above cannot see it.
+    import re as _re
+    broken_comprehensions = []
+    for dirpath, _dirs, files in os.walk(src_dir):
+        for f in sorted(files):
+            if not f.endswith(".py"):
+                continue
+            full = os.path.join(dirpath, f)
+            rel = os.path.relpath(full, src_dir).replace("\\", "/")
+            with open(full, encoding="utf-8", errors="replace") as fh:
+                for n, line in enumerate(fh, 1):
+                    if _re.search(r'_\[\d', line):
+                        broken_comprehensions.append((rel, n, line.strip()))
+
+    serious = [b for b in bad if b[3] == "DATA"]
+    print()
+    print("needs attention (short strings lost, not docstrings): %d" % len(serious))
+    for module, path, lost, kind, origin in serious[:args.show]:
         print()
-        print("   %s  %s" % (module, path))
-        if isinstance(lost, str):
-            print("      %s" % lost)
-        else:
-            print("      strings lost : %s" % (lost[:6],))
-    if len(bad) > args.show:
+        print("   [%s] %s  %s" % (origin, module, path))
+        print("      lost: %s%s" % (lost[:8], " ..." if len(lost) > 8 else ""))
+    if len(serious) > args.show:
         print()
-        print("   ... and %d more" % (len(bad) - args.show))
-    return 1 if bad else 0
+        print("   ... and %d more" % (len(serious) - args.show))
+
+    print()
+    print("lost list comprehensions (`_[1]` left in place): %d"
+          % len(broken_comprehensions))
+    for rel, n, line in broken_comprehensions[:args.show]:
+        print("   %s:%d  %s" % (rel, n, line[:70]))
+
+    return 1 if (serious or broken_comprehensions) else 0
 
 
 if __name__ == "__main__":
