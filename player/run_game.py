@@ -20,6 +20,51 @@ SHIMS = os.path.join(HERE, "yagashim")
 CACHE = os.path.join(HERE, "gamecache")
 
 
+def install_hit_probe():
+    """Wrap utility.CursorOverSprite and report which bound rejects a sprite.
+
+    The four comparisons are all strict:
+        x > rect.x  and  x < rect.x + w  and  y > rect.y  and  y < rect.y + h
+    so a sprite can be rejected for a reason that is not obvious from outside.
+    """
+    import __builtin__
+    __builtin__.False, __builtin__.True = 0, 1
+    __builtin__.false, __builtin__.true = 0, 1
+
+    import _stub
+    from python_shared.utility import utility as _u
+    original = _u.CursorOverSprite
+    seen = {}
+
+    def probe(sprite, rectOnly=0):
+        import globals as game_globals
+        result = original(sprite, rectOnly)
+        try:
+            rect = sprite.renderRect
+            x = game_globals.g_Cursor.screenX()
+            y = game_globals.g_Cursor.screenY()
+            rx, ry = rect.x, rect.y
+            rw, rh = rect.width, rect.height
+            checks = [("x>rect.x", x > rx), ("x<rect.right", x < rx + rw),
+                      ("y>rect.y", y > ry), ("y<rect.bottom", y < ry + rh)]
+            failed = [name for name, ok in checks if not ok]
+            locator = getattr(getattr(sprite, "anim", None), "locator", "?")
+            key = (locator, tuple(failed))
+            if key not in seen:
+                seen[key] = True
+                _stub.LOG.record("call", "hit.CursorOverSprite",
+                                 "%s cursor=(%s,%s) rect=(%s,%s %sx%s) "
+                                 "failed=%s enabled=%s -> %s"
+                                 % (locator, x, y, rx, ry, rw, rh,
+                                    failed or "none",
+                                    game_globals.g_Cursor.enabled, result))
+        except Exception, exc:
+            _stub.LOG.record("call", "hit.probe", "error: %s" % exc)
+        return result
+
+    _u.CursorOverSprite = probe
+
+
 _pending = {}
 
 
@@ -30,6 +75,8 @@ def main():
                     help="stop after this many rendered frames")
     ap.add_argument("--screenshot", help="save the last frame here")
     ap.add_argument("--scene", help="start in this scene instead of the logo")
+    ap.add_argument("--debug-hit", action="store_true",
+                    help="log every CursorOverSprite test and which bound failed")
     ap.add_argument("--click", action="append", default=[],
                     help="inject a click: X,Y or X,Y@FRAME (repeatable)")
     args = ap.parse_args()
@@ -96,6 +143,9 @@ def main():
         import globals as game_globals
         print "starting in scene %r instead of %r" % (args.scene, game_globals.INITIAL_SCENE)
         game_globals.INITIAL_SCENE = args.scene
+
+    if args.debug_hit:
+        install_hit_probe()
 
     real_stdout, real_stderr = sys.stdout, sys.stderr
     sys.argv = ["boot.py"]

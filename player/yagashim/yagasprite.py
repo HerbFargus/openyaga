@@ -343,6 +343,9 @@ class ISprite(_stub.Stub):
         """
         x, y = getattr(collider, "x", None), getattr(collider, "y", None)
         if x is None or y is None or not self._drawn:
+            _stub.LOG.record("call", "yagasprite.Intersect",
+                             "collider=%s x=%r y=%r drawn=%d -> reject"
+                             % (type(collider).__name__, x, y, len(self._drawn)))
             return 0
         for layer, ox, oy in self._drawn:
             lx, ly = int(x) - ox, int(y) - oy
@@ -350,6 +353,9 @@ class ISprite(_stub.Stub):
                 alpha = layer.rgba[(ly * layer.w + lx) * 4 + 3]
                 if alpha:
                     return 1
+        _stub.LOG.record("call", "yagasprite.Intersect",
+                         "(%s) at (%s,%s) -> transparent" % (
+                             getattr(self.anim, "locator", "?"), x, y))
         return 0
 
     def Render(self, camera=None):
