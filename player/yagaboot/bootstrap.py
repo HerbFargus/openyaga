@@ -17,6 +17,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import time
 
 from . import pyz
@@ -29,6 +30,33 @@ KNOWN_GAMES = {
 }
 
 MD5_BYTES = 5000
+
+# Python 2.2 string exceptions, in both forms the game uses:
+#   raise "message"            -> raise Exception("message")
+#   raise "message", value     -> raise Exception("message", value)
+# Removed from the language in 2.6, so under 2.7 these become a TypeError
+# about exceptions needing to derive from BaseException.
+#   raise "message" % value    -> raise Exception("message" % value)
+_STRING_RAISE = re.compile(r"""^(\s*)raise\s+(['"])(.*?)\2\s*$""")
+_STRING_RAISE_ARGS = re.compile(r"""^(\s*)raise\s+(['"])(.*?)\2\s*,\s*(.+?)\s*$""")
+_STRING_RAISE_FMT = re.compile(r"""^(\s*)raise\s+(['"])(.*?)\2\s*%\s*(.+?)\s*$""")
+
+
+def fix_python22(text: str) -> str:
+    """Rewrite constructs that were legal in 2.2 but are errors in 2.7.
+
+    The line ending is split off first: `\\s*$` would otherwise swallow the
+    newline and weld the next statement onto the same line.
+    """
+    out = []
+    for line in text.splitlines(True):
+        body = line.rstrip("\r\n")
+        ending = line[len(body):]
+        body = _STRING_RAISE_FMT.sub(r"\1raise Exception(\2\3\2 % \4)", body)
+        body = _STRING_RAISE_ARGS.sub(r"\1raise Exception(\2\3\2, \4)", body)
+        body = _STRING_RAISE.sub(r"\1raise Exception(\2\3\2)", body)
+        out.append(body + ending)
+    return "".join(out)
 
 
 def partial_md5(path: str, count: int = MD5_BYTES) -> str:
@@ -105,8 +133,9 @@ def extract_boot(exe_path: str, pyc_dir: str, src_dir: str):
         if kind == "s":
             dest = os.path.join(src_dir, "_boot", name + ".py")
             os.makedirs(os.path.dirname(dest), exist_ok=True)
+            text = fix_python22(blob.rstrip(b"\x00").decode("latin-1"))
             with open(dest, "wb") as fh:
-                fh.write(blob.rstrip(b"\x00"))   # drop NUL padding
+                fh.write(ensure_encoding(text.encode("latin-1")))
             source += 1
         else:
             dest = os.path.join(pyc_dir, "_boot", name + ".pyc")
@@ -115,6 +144,23 @@ def extract_boot(exe_path: str, pyc_dir: str, src_dir: str):
                 fh.write(blob)                   # header already present
             compiled += 1
     return compiled, source
+
+
+def ensure_encoding(raw: bytes, encoding: str = "latin-1") -> bytes:
+    """Give non-ASCII source an encoding declaration, for Python 2.7.
+
+    Python 2.2 did not enforce PEP 263, so the shipped scripts never declare
+    one -- boot.py has a (c) symbol in its copyright banner and nothing else.
+    Under 2.7 that is a SyntaxError the moment the file is executed.  (Note
+    py_compile accepts it and execfile does not, so a parse check alone will
+    not catch this.)  The declaration must be on line 1 or 2.
+    """
+    if not any(b > 127 for b in raw):
+        return raw
+    head = raw.split(b"\n")[:2]
+    if any(b"coding" in line for line in head):
+        return raw
+    return ("# -*- coding: %s -*-\n" % encoding).encode("ascii") + raw
 
 
 def clean_source(path: str) -> int:
@@ -129,10 +175,18 @@ def clean_source(path: str) -> int:
         lines = fh.readlines()
     kept = [ln for ln in lines if ln.rstrip("\r\n").rstrip() != "return"
             or ln.startswith((" ", "\t"))]
+    kept = [fix_python22(ln) for ln in kept]
     removed = len(lines) - len(kept)
     if removed:
         with open(path, "w", encoding="utf-8") as fh:
             fh.writelines(kept)
+    # The decompiler's output is written as UTF-8, so declare that.
+    with open(path, "rb") as fh:
+        raw = fh.read()
+    fixed = ensure_encoding(raw, "utf-8")
+    if fixed is not raw:
+        with open(path, "wb") as fh:
+            fh.write(fixed)
     return removed
 
 
