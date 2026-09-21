@@ -88,45 +88,276 @@ Loaded 48 items
 Initializing timer objects...
 
 ==============================
-Setting scene "helogo"
-==============================
-
-setting current scene
-HIDING ITEM computer
-HIDING ITEM holder
-Warning: PlayNextMusic has no self.__nextMusic to play!
-Loading data from rooms/tv_room/tv_room_pre.xml...
----- SCENE STACK ----
-['helogo']
----------------------
----- Cleanup found 0 unreachable objects ----
-
-==============================
-Setting scene "tv_room"
-==============================
-
-Loading data from rooms/tv_room/tv_room.xml...
-Building room scene_tv_room...
-<yagagraphics.IImageAnim>
-setting current scene
-Warning: no music info for room tv_room (setMusicForRoom)
-generic ExitRoom
-Warning: PlayNextMusic has no self.__nextMusic to play!
-Loading data from rooms/bedroom/bedroom_pre.xml...
----- SCENE STACK ----
-['tv_room', 'helogo']
----------------------
----- Cleanup found 0 unreachable objects ----
-
-==============================
 Setting scene "bedroom"
 ==============================
 
 Loading data from rooms/bedroom/bedroom.xml...
+Traceback (most recent call last):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\room_loader.py", line 98, in StartElement
+    if not self.TryAddingData(name, attrMap, self.currentSounds):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader.py", line 105, in TryAddingData
+    currentTag.SetData(name, val)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader_classes.py", line 320, in SetData
+    CXmlTag.SetData(self, name, clickpoint.CSoundInfoObject(frame, path))
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\clickpoint.py", line 483, in __init__
+    globals.g_PreloadManager.PreloadLocal(soundPath)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\pj_preload_manager.py", line 65, in PreloadLocal
+    if not self.preloadHandles.has_key(path):
+AttributeError: 'list' object has no attribute 'has_key'
+Traceback (most recent call last):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\room_loader.py", line 98, in StartElement
+    if not self.TryAddingData(name, attrMap, self.currentSounds):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader.py", line 105, in TryAddingData
+    currentTag.SetData(name, val)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader_classes.py", line 320, in SetData
+    CXmlTag.SetData(self, name, clickpoint.CSoundInfoObject(frame, path))
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\clickpoint.py", line 483, in __init__
+    globals.g_PreloadManager.PreloadLocal(soundPath)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\pj_preload_manager.py", line 65, in PreloadLocal
+    if not self.preloadHandles.has_key(path):
+AttributeError: 'list' object has no attribute 'has_key'
+Traceback (most recent call last):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\room_loader.py", line 98, in StartElement
+    if not self.TryAddingData(name, attrMap, self.currentSounds):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader.py", line 105, in TryAddingData
+    currentTag.SetData(name, val)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader_classes.py", line 320, in SetData
+    CXmlTag.SetData(self, name, clickpoint.CSoundInfoObject(frame, path))
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\clickpoint.py", line 483, in __init__
+    globals.g_PreloadManager.PreloadLocal(soundPath)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\pj_preload_manager.py", line 65, in PreloadLocal
+    if not self.preloadHandles.has_key(path):
+AttributeError: 'list' object has no attribute 'has_key'
+Traceback (most recent call last):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\room_loader.py", line 98, in StartElement
+    if not self.TryAddingData(name, attrMap, self.currentSounds):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader.py", line 105, in TryAddingData
+    currentTag.SetData(name, val)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader_classes.py", line 320, in SetData
+    CXmlTag.SetData(self, name, clickpoint.CSoundInfoObject(frame, path))
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\clickpoint.py", line 483, in __init__
+    globals.g_PreloadManager.PreloadLocal(soundPath)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\pj_preload_manager.py", line 65, in PreloadLocal
+    if not self.preloadHandles.has_key(path):
+AttributeError: 'list' object has no attribute 'has_key'
+Traceback (most recent call last):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\room_loader.py", line 98, in StartElement
+    if not self.TryAddingData(name, attrMap, self.currentSounds):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader.py", line 105, in TryAddingData
+    currentTag.SetData(name, val)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader_classes.py", line 320, in SetData
+    CXmlTag.SetData(self, name, clickpoint.CSoundInfoObject(frame, path))
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\clickpoint.py", line 483, in __init__
+    globals.g_PreloadManager.PreloadLocal(soundPath)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\pj_preload_manager.py", line 65, in PreloadLocal
+    if not self.preloadHandles.has_key(path):
+AttributeError: 'list' object has no attribute 'has_key'
+Traceback (most recent call last):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\room_loader.py", line 98, in StartElement
+    if not self.TryAddingData(name, attrMap, self.currentSounds):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader.py", line 105, in TryAddingData
+    currentTag.SetData(name, val)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader_classes.py", line 320, in SetData
+    CXmlTag.SetData(self, name, clickpoint.CSoundInfoObject(frame, path))
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\clickpoint.py", line 483, in __init__
+    globals.g_PreloadManager.PreloadLocal(soundPath)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\pj_preload_manager.py", line 65, in PreloadLocal
+    if not self.preloadHandles.has_key(path):
+AttributeError: 'list' object has no attribute 'has_key'
+Traceback (most recent call last):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\room_loader.py", line 98, in StartElement
+    if not self.TryAddingData(name, attrMap, self.currentSounds):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader.py", line 105, in TryAddingData
+    currentTag.SetData(name, val)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader_classes.py", line 320, in SetData
+    CXmlTag.SetData(self, name, clickpoint.CSoundInfoObject(frame, path))
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\clickpoint.py", line 483, in __init__
+    globals.g_PreloadManager.PreloadLocal(soundPath)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\pj_preload_manager.py", line 65, in PreloadLocal
+    if not self.preloadHandles.has_key(path):
+AttributeError: 'list' object has no attribute 'has_key'
+Traceback (most recent call last):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\room_loader.py", line 98, in StartElement
+    if not self.TryAddingData(name, attrMap, self.currentSounds):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader.py", line 105, in TryAddingData
+    currentTag.SetData(name, val)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader_classes.py", line 320, in SetData
+    CXmlTag.SetData(self, name, clickpoint.CSoundInfoObject(frame, path))
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\clickpoint.py", line 483, in __init__
+    globals.g_PreloadManager.PreloadLocal(soundPath)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\pj_preload_manager.py", line 65, in PreloadLocal
+    if not self.preloadHandles.has_key(path):
+AttributeError: 'list' object has no attribute 'has_key'
+Traceback (most recent call last):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\room_loader.py", line 98, in StartElement
+    if not self.TryAddingData(name, attrMap, self.currentSounds):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader.py", line 105, in TryAddingData
+    currentTag.SetData(name, val)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader_classes.py", line 320, in SetData
+    CXmlTag.SetData(self, name, clickpoint.CSoundInfoObject(frame, path))
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\clickpoint.py", line 483, in __init__
+    globals.g_PreloadManager.PreloadLocal(soundPath)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\pj_preload_manager.py", line 65, in PreloadLocal
+    if not self.preloadHandles.has_key(path):
+AttributeError: 'list' object has no attribute 'has_key'
+Traceback (most recent call last):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\room_loader.py", line 98, in StartElement
+    if not self.TryAddingData(name, attrMap, self.currentSounds):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader.py", line 105, in TryAddingData
+    currentTag.SetData(name, val)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader_classes.py", line 320, in SetData
+    CXmlTag.SetData(self, name, clickpoint.CSoundInfoObject(frame, path))
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\clickpoint.py", line 483, in __init__
+    globals.g_PreloadManager.PreloadLocal(soundPath)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\pj_preload_manager.py", line 65, in PreloadLocal
+    if not self.preloadHandles.has_key(path):
+AttributeError: 'list' object has no attribute 'has_key'
+Traceback (most recent call last):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\room_loader.py", line 98, in StartElement
+    if not self.TryAddingData(name, attrMap, self.currentSounds):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader.py", line 105, in TryAddingData
+    currentTag.SetData(name, val)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader_classes.py", line 320, in SetData
+    CXmlTag.SetData(self, name, clickpoint.CSoundInfoObject(frame, path))
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\clickpoint.py", line 483, in __init__
+    globals.g_PreloadManager.PreloadLocal(soundPath)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\pj_preload_manager.py", line 65, in PreloadLocal
+    if not self.preloadHandles.has_key(path):
+AttributeError: 'list' object has no attribute 'has_key'
+Traceback (most recent call last):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\room_loader.py", line 98, in StartElement
+    if not self.TryAddingData(name, attrMap, self.currentSounds):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader.py", line 105, in TryAddingData
+    currentTag.SetData(name, val)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader_classes.py", line 320, in SetData
+    CXmlTag.SetData(self, name, clickpoint.CSoundInfoObject(frame, path))
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\clickpoint.py", line 483, in __init__
+    globals.g_PreloadManager.PreloadLocal(soundPath)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\pj_preload_manager.py", line 65, in PreloadLocal
+    if not self.preloadHandles.has_key(path):
+AttributeError: 'list' object has no attribute 'has_key'
+Traceback (most recent call last):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\room_loader.py", line 98, in StartElement
+    if not self.TryAddingData(name, attrMap, self.currentSounds):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader.py", line 105, in TryAddingData
+    currentTag.SetData(name, val)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader_classes.py", line 320, in SetData
+    CXmlTag.SetData(self, name, clickpoint.CSoundInfoObject(frame, path))
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\clickpoint.py", line 483, in __init__
+    globals.g_PreloadManager.PreloadLocal(soundPath)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\pj_preload_manager.py", line 65, in PreloadLocal
+    if not self.preloadHandles.has_key(path):
+AttributeError: 'list' object has no attribute 'has_key'
+Traceback (most recent call last):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\room_loader.py", line 98, in StartElement
+    if not self.TryAddingData(name, attrMap, self.currentSounds):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader.py", line 105, in TryAddingData
+    currentTag.SetData(name, val)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader_classes.py", line 320, in SetData
+    CXmlTag.SetData(self, name, clickpoint.CSoundInfoObject(frame, path))
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\clickpoint.py", line 483, in __init__
+    globals.g_PreloadManager.PreloadLocal(soundPath)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\pj_preload_manager.py", line 65, in PreloadLocal
+    if not self.preloadHandles.has_key(path):
+AttributeError: 'list' object has no attribute 'has_key'
+Traceback (most recent call last):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\room_loader.py", line 98, in StartElement
+    if not self.TryAddingData(name, attrMap, self.currentSounds):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader.py", line 105, in TryAddingData
+    currentTag.SetData(name, val)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader_classes.py", line 320, in SetData
+    CXmlTag.SetData(self, name, clickpoint.CSoundInfoObject(frame, path))
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\clickpoint.py", line 483, in __init__
+    globals.g_PreloadManager.PreloadLocal(soundPath)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\pj_preload_manager.py", line 65, in PreloadLocal
+    if not self.preloadHandles.has_key(path):
+AttributeError: 'list' object has no attribute 'has_key'
+Traceback (most recent call last):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\room_loader.py", line 98, in StartElement
+    if not self.TryAddingData(name, attrMap, self.currentSounds):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader.py", line 105, in TryAddingData
+    currentTag.SetData(name, val)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader_classes.py", line 320, in SetData
+    CXmlTag.SetData(self, name, clickpoint.CSoundInfoObject(frame, path))
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\clickpoint.py", line 483, in __init__
+    globals.g_PreloadManager.PreloadLocal(soundPath)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\pj_preload_manager.py", line 65, in PreloadLocal
+    if not self.preloadHandles.has_key(path):
+AttributeError: 'list' object has no attribute 'has_key'
+Traceback (most recent call last):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\room_loader.py", line 98, in StartElement
+    if not self.TryAddingData(name, attrMap, self.currentSounds):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader.py", line 105, in TryAddingData
+    currentTag.SetData(name, val)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader_classes.py", line 320, in SetData
+    CXmlTag.SetData(self, name, clickpoint.CSoundInfoObject(frame, path))
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\clickpoint.py", line 483, in __init__
+    globals.g_PreloadManager.PreloadLocal(soundPath)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\pj_preload_manager.py", line 65, in PreloadLocal
+    if not self.preloadHandles.has_key(path):
+AttributeError: 'list' object has no attribute 'has_key'
+Traceback (most recent call last):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\room_loader.py", line 98, in StartElement
+    if not self.TryAddingData(name, attrMap, self.currentSounds):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader.py", line 105, in TryAddingData
+    currentTag.SetData(name, val)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader_classes.py", line 320, in SetData
+    CXmlTag.SetData(self, name, clickpoint.CSoundInfoObject(frame, path))
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\clickpoint.py", line 483, in __init__
+    globals.g_PreloadManager.PreloadLocal(soundPath)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\pj_preload_manager.py", line 65, in PreloadLocal
+    if not self.preloadHandles.has_key(path):
+AttributeError: 'list' object has no attribute 'has_key'
+Traceback (most recent call last):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\room_loader.py", line 98, in StartElement
+    if not self.TryAddingData(name, attrMap, self.currentSounds):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader.py", line 105, in TryAddingData
+    currentTag.SetData(name, val)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader_classes.py", line 320, in SetData
+    CXmlTag.SetData(self, name, clickpoint.CSoundInfoObject(frame, path))
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\clickpoint.py", line 483, in __init__
+    globals.g_PreloadManager.PreloadLocal(soundPath)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\pj_preload_manager.py", line 65, in PreloadLocal
+    if not self.preloadHandles.has_key(path):
+AttributeError: 'list' object has no attribute 'has_key'
+Traceback (most recent call last):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\room_loader.py", line 98, in StartElement
+    if not self.TryAddingData(name, attrMap, self.currentSounds):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader.py", line 105, in TryAddingData
+    currentTag.SetData(name, val)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader_classes.py", line 320, in SetData
+    CXmlTag.SetData(self, name, clickpoint.CSoundInfoObject(frame, path))
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\clickpoint.py", line 483, in __init__
+    globals.g_PreloadManager.PreloadLocal(soundPath)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\pj_preload_manager.py", line 65, in PreloadLocal
+    if not self.preloadHandles.has_key(path):
+AttributeError: 'list' object has no attribute 'has_key'
+Traceback (most recent call last):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\room_loader.py", line 98, in StartElement
+    if not self.TryAddingData(name, attrMap, self.currentSounds):
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader.py", line 105, in TryAddingData
+    currentTag.SetData(name, val)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\xml_loader_classes.py", line 320, in SetData
+    CXmlTag.SetData(self, name, clickpoint.CSoundInfoObject(frame, path))
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\python_shared\adventure\clickpoint.py", line 483, in __init__
+    globals.g_PreloadManager.PreloadLocal(soundPath)
+  File "C:\Users\seamus\Desktop\claude-code\pajama-sam-4-reverse-engineering\player\gamecache\scripts\pj_preload_manager.py", line 65, in PreloadLocal
+    if not self.preloadHandles.has_key(path):
+AttributeError: 'list' object has no attribute 'has_key'
 Building room scene_bedroom...
+HIDING ITEM computer
+HIDING ITEM holder
 Warning: could not find interactive object with name Sam
 <yagagraphics.IImageAnim>
 Warning: could not find interactive object with name Sam
 Warning: could not find interactive object with name Sam
 setting current scene
+Warning: no event stream for:
+ talkies\sam\pj4pc_sam_00045.evt
+Warning: no event stream for:
+ talkies\sam\pj4pc_sam_00042.evt
+Warning: no event stream for:
+ talkies\sam\pj4pc_sam_00046.evt
+Warning: no event stream for:
+ talkies\sam\pj4pc_sam_00043.evt
 Fin.

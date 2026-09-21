@@ -126,6 +126,7 @@ def main():
     _stub.FRAME_LIMIT = args.frames
     _stub.SCREENSHOT = os.path.abspath(args.screenshot) if args.screenshot else None
     _stub.SKIP_VIDEO = args.skip_video
+    _stub.TRACE_STATE = args.debug_hit
     for n, spec in enumerate(args.click):
         coords, _, frame = spec.partition("@")
         x, y = (int(v) for v in coords.split(","))

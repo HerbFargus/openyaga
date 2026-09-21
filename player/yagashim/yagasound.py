@@ -29,6 +29,7 @@ swallow it.  Unknown attributes still fall back to a stub.
 import os
 import sys
 import tempfile
+import time
 
 import pygame
 
@@ -42,6 +43,7 @@ except ImportError:
 _mod = _stub.StubModule(__name__)
 
 _mixer_ready = None
+_music_owner = None      # which ISound currently owns the single music channel
 _mp3_cache = {}          # game path -> temp file, since music needs a file
 
 
@@ -77,6 +79,7 @@ class ISound(object):
         self.is_music = self.path.lower().endswith(".mp3")
         self.chunk = None
         self.channel = None
+        self._started = None
         self.volume = 1.0
         object.__setattr__(self, "_ready", True)
 
@@ -130,11 +133,21 @@ class ISound(object):
     def isPlaying(self):
         if self.chunk is not None:
             return bool(self.channel and self.channel.get_busy())
-        if self.is_music and _mixer_ready:
-            return bool(pygame.mixer.music.get_busy())
-        return False
+        if not (self.is_music and _mixer_ready):
+            return False
+        # SDL_mixer has ONE music channel, so get_busy() alone says only that
+        # *something* is playing.  Reporting that for a finished piece of
+        # dialogue is fatal: the script waits for the talkie to end and the
+        # game stops responding while the background music keeps going.
+        # A sound is playing only while it still owns the channel.
+        if _music_owner is not self:
+            return False
+        if self.duration and time.time() - (self._started or 0) > self.duration + 0.25:
+            return False
+        return bool(pygame.mixer.music.get_busy())
 
     def Run(self, scene=None, *a, **kw):
+        global _music_owner
         if not _ensure_mixer():
             return
         if self.chunk is not None:
@@ -146,6 +159,8 @@ class ISound(object):
             try:
                 pygame.mixer.music.load(_temp_mp3(self.path, bytes(data)))
                 pygame.mixer.music.play()
+                _music_owner = self
+                self._started = time.time()
             except Exception, exc:
                 _stub.LOG.record("call", "yagasound.ISound.Run",
                                  "(%s) %s" % (self.path, exc))
@@ -154,9 +169,12 @@ class ISound(object):
         _stub.LOG.record("call", "yagasound.ISound.Run", "(%s)" % self.path)
 
     def Stop(self, scene=None, *a, **kw):
+        global _music_owner
         if self.chunk is not None and self.channel:
             self.channel.stop()
         elif self.is_music and _mixer_ready:
+            if _music_owner is self:
+                _music_owner = None
             pygame.mixer.music.stop()
 
     def __nonzero__(self):

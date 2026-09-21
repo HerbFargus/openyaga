@@ -282,6 +282,15 @@ class EventManager(_stub.Stub):
                                      "-> %s: %s" % (type(exc).__name__, exc))
                     raise
 
+            if _stub.TRACE_STATE:
+                try:
+                    import globals as g
+                    _stub.LOG.record('state', 'frame %d' % self.frames,
+                                     'cursor.enabled=%s appPaused=%s scene=%s'
+                                     % (g.g_Cursor.enabled, g.g_AppPaused,
+                                        g.g_SceneManager.CurrentScene()))
+                except Exception, e:
+                    pass
             self.frames += 1
             if self.frame_limit and self.frames >= self.frame_limit:
                 if _stub.SCREENSHOT:
