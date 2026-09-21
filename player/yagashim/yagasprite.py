@@ -39,6 +39,9 @@ class ISprite(_stub.Stub):
         self.hFlip = 0
         self.vFlip = 0
         self.visible = 1
+        # Not a list: the game sets attributes on it, e.g.
+        # `sprite.talkies.continuous = true`.
+        self.talkies = _stub.Stub("%s.talkies" % name)
 
     def Run(self, *a, **kw):
         _stub.LOG.record("call", "%s.Run" % self._yaga_name, _stub._args(a, kw))
@@ -74,7 +77,6 @@ class Sprite(ISprite):
 class TalkieSprite(ISprite):
     def __init__(self):
         ISprite.__init__(self, "yagasprite.TalkieSprite")
-        self.talkies = []
         _stub.LOG.record("new", "yagasprite.TalkieSprite", "()")
 
 

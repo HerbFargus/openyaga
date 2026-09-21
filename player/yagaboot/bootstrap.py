@@ -20,7 +20,7 @@ import os
 import re
 import time
 
-from . import pyz
+from . import patches, pyz
 
 # ScummVM-style identification: md5 of the first 5000 bytes of a key data file.
 # These match the detection entries on the ScummVM 'yaga' branch.
@@ -190,10 +190,21 @@ def clean_source(path: str) -> int:
     return removed
 
 
+def apply_patches(path, module):
+    """Repair known decompiler mistakes in one recovered module."""
+    with open(path, encoding="utf-8") as fh:
+        text = fh.read()
+    fixed, applied, problems = patches.apply(module, text)
+    if fixed != text:
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write(fixed)
+    return applied, problems
+
+
 def decompile(pyc_dir: str, src_dir: str, verbose: bool = False):
     """Recover .py source from the extracted .pyc files.
 
-    Returns (ok, failures) where failures is a list of (module, reason).
+    Returns (ok, failures, patched, patch_problems).
     """
     try:
         from uncompyle6.main import decompile_file
@@ -204,6 +215,7 @@ def decompile(pyc_dir: str, src_dir: str, verbose: bool = False):
             "It is only needed for this one-time setup, not to play.")
 
     ok, failures = 0, []
+    patched, patch_problems = [], []
     for dirpath, _dirs, files in os.walk(pyc_dir):
         for f in sorted(files):
             if not f.endswith(".pyc"):
@@ -216,6 +228,10 @@ def decompile(pyc_dir: str, src_dir: str, verbose: bool = False):
                 with open(dest, "w", encoding="utf-8") as out:
                     decompile_file(src, out)
                 clean_source(dest)
+                module = rel[:-3].replace("\\", "/")
+                applied, problems = apply_patches(dest, module)
+                patched.extend(applied)
+                patch_problems.extend(problems)
                 ok += 1
                 if verbose:
                     print("   %s" % rel)
@@ -223,7 +239,7 @@ def decompile(pyc_dir: str, src_dir: str, verbose: bool = False):
                 failures.append((rel, "%s: %s" % (type(exc).__name__, exc)))
                 if os.path.exists(dest):
                     os.remove(dest)
-    return ok, failures
+    return ok, failures, patched, patch_problems
 
 
 def prepare(game_dir: str, cache_dir: str, verbose: bool = False):
@@ -260,10 +276,15 @@ def prepare(game_dir: str, cache_dir: str, verbose: bool = False):
 
     total_pyc = sum(1 for _d, _s, fs in os.walk(pyc_dir) for f in fs if f.endswith(".pyc"))
     print("decompiling...")
-    ok, failures = decompile(pyc_dir, src_dir, verbose)
+    ok, failures, patched, patch_problems = decompile(pyc_dir, src_dir, verbose)
     print("recovered  : %d of %d compiled modules" % (ok, total_pyc))
     for mod, why in failures:
         print("   FAILED %s -- %s" % (mod, why))
+    print("patched    : %d known decompiler mistakes" % len(patched))
+    for line in patched:
+        print("   fixed %s" % line)
+    for line in patch_problems:
+        print("   PATCH DID NOT APPLY -- %s" % line)
 
     manifest = {
         "prepared": time.strftime("%Y-%m-%dT%H:%M:%S"),
@@ -277,6 +298,8 @@ def prepare(game_dir: str, cache_dir: str, verbose: bool = False):
         "boot_source": bs,
         "modules_recovered": ok,
         "failures": failures,
+        "patched": patched,
+        "patch_problems": patch_problems,
         "scripts": os.path.abspath(src_dir),
     }
     os.makedirs(cache_dir, exist_ok=True)
