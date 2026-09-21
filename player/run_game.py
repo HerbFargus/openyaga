@@ -65,6 +65,39 @@ def install_hit_probe():
     _u.CursorOverSprite = probe
 
 
+def _exit_quietly():
+    """Leave without running the interpreter's shutdown.
+
+    Python 2 clears module globals and then runs whatever __del__ methods
+    remain, so the game's destructors all fail on globals that are suddenly
+    None and print pages of
+
+        Exception AttributeError: "'NoneType' object has no attribute ..."
+        in <bound method CPJInventoryItem.__del__ ...> ignored
+
+    Filtering sys.stderr does not help: by then sys itself has been torn down
+    and Python writes to the C stderr directly.  So flush everything that
+    matters and leave via os._exit, which skips finalisation entirely.  The
+    game has already finished by this point -- boot.py has printed its "Fin."
+    -- so there is nothing left to tear down that we care about.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.flush()
+        except Exception:
+            pass
+    # The game's own log is an ordinary file object somewhere in its module
+    # graph; flush any that are still open so the log is complete.
+    import gc
+    for obj in gc.get_objects():
+        if isinstance(obj, file) and not obj.closed and obj.mode.startswith("w"):
+            try:
+                obj.flush()
+            except Exception:
+                pass
+    os._exit(0)
+
+
 _pending = {}
 
 
@@ -180,6 +213,8 @@ def main():
             pass
 
     report(_stub.LOG, outcome, log_path)
+    _exit_quietly()
+
 
 
 def report(log, outcome, log_path):
