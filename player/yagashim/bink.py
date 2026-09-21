@@ -37,6 +37,14 @@ CACHE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
                      "cache", "movies")
 
 
+def _last_line(text):
+    """ffmpeg's verdict: the last line of what it printed, on one line.  The
+    rest is build-specific chatter (pointers, library banners), and a trace
+    line has to read the same from one machine to the next."""
+    lines = [l.strip() for l in (text or "").splitlines() if l.strip()]
+    return lines[-1][:120] if lines else "no output"
+
+
 class Movie(object):
     """One movie, decoding while it plays.
 
@@ -104,7 +112,7 @@ class Movie(object):
             if not ok or not os.path.isfile(target):
                 # Not every movie has a soundtrack -- the Atari logo does not.
                 _stub.LOG.record("call", "yagasprite.bink",
-                                 "(%s) no audio: %s" % (self.path, err.strip()[:80]))
+                                 "(%s) no audio: %s" % (self.path, _last_line(err)))
                 return None
         try:
             return pygame.mixer.Sound(target)

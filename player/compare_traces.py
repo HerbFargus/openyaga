@@ -30,6 +30,15 @@ _MASKS = [
     (re.compile(r"(_anim_id\s+=\s+)\d+L?"), r"\1?"),
     (re.compile(r"yaga_[A-Za-z0-9_]+\.(mp3|wav)"), r"yaga_?.\1"),
     (re.compile(r"trace-\d+\.log"), "trace-?.log"),
+    # The game runs its file names through os.path.normpath, which spells
+    # them with the host's separator: interface\\cursors on Windows,
+    # interface/cursors elsewhere.  Same file either way.
+    (re.compile(r"\\\\|\\"), "/"),
+    # ffmpeg's own wording of why a movie has no soundtrack varies by build
+    (re.compile(r"(\) no audio): .*"), r"\1"),
+    # how the window is shown is the viewer's choice, not the game's
+    (re.compile(r"(window \d+x\d+, )?(windowed|fullscreen), (fit|integer) scaling, (sharp|smooth)"),
+     "display ?"),
 ]
 _DRIVING = re.compile(r"^\s*(recording to |replaying |.*replay finished after |"
                       r"\d+\s+call\s+test\.(click|key|hover)|"

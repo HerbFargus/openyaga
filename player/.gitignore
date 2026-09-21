@@ -28,3 +28,4 @@ display.json
 .venv-setup/
 .tools/
 setup-check.log
+/ffmpeg

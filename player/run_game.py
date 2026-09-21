@@ -408,6 +408,14 @@ def main():
     sys.path.insert(0, scripts)
     sys.path.insert(0, SHIMS)
 
+    # The game imports imageop, which some 64-bit Python 2.7 builds leave out
+    # (conda-forge's on Linux); stand in for it only when it is missing.
+    try:
+        import imageop  # noqa: F401
+    except ImportError:
+        import imageop_fallback
+        sys.modules["imageop"] = imageop_fallback
+
     import _stub
     log_path = os.path.join(HERE, "trace.log")
     if _in_use(log_path):
