@@ -144,7 +144,7 @@ movie as zero length, which takes you straight to the bedroom.
 
 | | |
 |---|---|
-| move the mouse | the pointer changes over anything clickable, as it does in the original: an outline arrow normally, a filled one over a clickpoint, an hourglass while the game is busy, and nothing at all during a cutscene |
+| move the mouse | the pointer changes over anything clickable, as it does in the original: an outline arrow normally, a filled one over a clickpoint, a direction arrow at an exit, an hourglass while the game is busy, and nothing at all during a cutscene |
 | move to the bottom of the screen | raises the inventory |
 | click a door | walks to the next room |
 | click an inventory item | uses it -- the card holder opens the album |
