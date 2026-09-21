@@ -108,11 +108,46 @@ class IRenderTarget(object):
         _stub.LOG.record("new", "yagagraphics.IRenderTarget", "(subclassed)")
 
 
+class IImageAnim(_stub.Stub):
+    """A decoded animation, as the sprite manager wraps it:
+
+        yagagraphics.IImageAnim(res).Compress(CompressionType.COMPRESS_YRLE, 1)
+
+    Compression is the engine's own in-memory scheme; there is nothing to gain
+    from imitating it here, so Compress returns self.
+    """
+
+    def __init__(self, res):
+        _stub.Stub.__init__(self, "yagagraphics.IImageAnim")
+        anim = getattr(res, "anim", None)
+        self.resource = res
+        self.anim = anim
+        self.frames = anim.frames if anim is not None else []
+        self.framesPerSecond = 15
+        self.locator = getattr(res, "path", "")
+        box = anim.bbox() if anim is not None else None
+        self.width = (box[2] - box[0]) if box else 0
+        self.height = (box[3] - box[1]) if box else 0
+        _stub.LOG.record("new", "yagagraphics.IImageAnim",
+                         "(%s) -> %d frames, %dx%d"
+                         % (self.locator, len(self.frames), self.width, self.height))
+
+    def Compress(self, kind=None, flag=None):
+        return self
+
+    def IsAnimDone(self):
+        return True
+
+    def __nonzero__(self):
+        return True
+
+
 _mod.VideoMode = VideoMode
 _mod.VideoDevice = VideoDevice
 _mod.RenderTarget = RenderTarget
 _mod.GraphicsSystem = GraphicsSystem
 _mod.IRenderTarget = IRenderTarget
+_mod.IImageAnim = IImageAnim
 
 # Replacing ourselves in sys.modules drops the real module's last reference.
 # Python 2 then tears it down and sets every global to None -- so the functions

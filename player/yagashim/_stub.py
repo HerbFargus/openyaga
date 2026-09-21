@@ -117,9 +117,11 @@ class Stub(object):
         LOG.record("call", name, _args(a, kw))
         return Stub(name + "()")
 
-    # Keep the game moving rather than raising.
+    # Keep the game moving rather than raising.  Truthy: the game asserts on
+    # engine objects constantly (`assert __debug__ and self.idevMouse`), and a
+    # falsy stand-in fails every one of those.
     def __nonzero__(self):
-        return False
+        return True
 
     def __len__(self):
         return 0
