@@ -163,20 +163,30 @@ class Stub(object):
 
     def __init__(self, name):
         object.__setattr__(self, "_yaga_name", name)
-        object.__setattr__(self, "_yaga_attrs", {})
+        # Keep anything already set: a game subclass may assign attributes
+        # before calling the engine's constructor -- Putt-Putt's input
+        # manager does -- and the engine keeps them.
+        if "_yaga_attrs" not in object.__getattribute__(self, "__dict__"):
+            object.__setattr__(self, "_yaga_attrs", {})
 
     def __getattr__(self, name):
         if name.startswith("__") and name.endswith("__"):
             raise AttributeError(name)
-        attrs = object.__getattribute__(self, "_yaga_attrs")
+        if name in ("_yaga_name", "_yaga_attrs"):
+            # Touched before Stub.__init__ ran (see above): set up lazily.
+            state = object.__getattribute__(self, "__dict__")
+            state.setdefault("_yaga_name", type(self).__name__)
+            state.setdefault("_yaga_attrs", {})
+            return state[name]
+        attrs = self._yaga_attrs
         if name not in attrs:
-            full = "%s.%s" % (object.__getattribute__(self, "_yaga_name"), name)
+            full = "%s.%s" % (self._yaga_name, name)
             LOG.record("get", full)
             attrs[name] = Stub(full)
         return attrs[name]
 
     def __setattr__(self, name, value):
-        full = "%s.%s" % (object.__getattribute__(self, "_yaga_name"), name)
+        full = "%s.%s" % (self._yaga_name, name)
         LOG.record("set", full, "= %s" % _brief(value))
         # A property with a setter, defined by a subclass, gets the value.
         # The game subclasses our sprites and adds its own -- CImageSprite
@@ -197,7 +207,7 @@ class Stub(object):
                 attr.__set__(self, value)
                 return
             break
-        object.__getattribute__(self, "_yaga_attrs")[name] = value
+        self._yaga_attrs[name] = value
 
     def __call__(self, *a, **kw):
         name = object.__getattribute__(self, "_yaga_name")

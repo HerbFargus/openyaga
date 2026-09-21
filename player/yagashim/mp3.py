@@ -33,8 +33,12 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 CACHE = os.path.join(os.path.dirname(HERE), "cache", "audio")
 
 
-def cache_path(path, root=CACHE, extension=".wav"):
-    """player/cache/audio/talkies/sam/pj4pc_sam_00055.wav, and so on."""
+def cache_path(path, root=None, extension=".wav"):
+    """player/cache/audio/talkies/sam/pj4pc_sam_00055.wav, and so on.
+
+    CACHE is read at call time: run_game.py --game points it at that game's
+    own folder, since two games can ship files of the same name."""
+    root = root or CACHE
     clean = str(path).replace("\\", "/").lstrip("/")
     stem, _ext = os.path.splitext(clean)
     return os.path.join(root, *(stem.split("/"))) + extension

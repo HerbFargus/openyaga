@@ -350,6 +350,10 @@ def main():
                     help="press a key: NAME@FRAME, e.g. escape@40 or space@90")
     ap.add_argument("--subtitles", action="store_true",
                     help="show the dialogue text (the game defaults it off)")
+    ap.add_argument("--game", metavar="TAG",
+                    help="run another Yaga game, set up with "
+                         "setup_game.py --game TAG: it gets its own "
+                         "gamecache-TAG, rundir-TAG and cache-TAG")
     rec = ap.add_argument_group(
         "record and replay", "a replay makes the same engine calls as the "
         "session it recorded, so two traces can be compared call by call")
@@ -380,6 +384,9 @@ def main():
                  "    C:\\Python27\\python.exe run_game.py"
                  % sys.version_info[:2])
 
+    global CACHE
+    suffix = ("-" + args.game) if args.game else ""
+    CACHE = os.path.join(HERE, "gamecache" + suffix)
     manifest_path = os.path.join(CACHE, "manifest.json")
     if not os.path.isfile(manifest_path):
         sys.exit("No prepared game found.  Run setup_game.py first (Python 3).")
@@ -431,7 +438,7 @@ def main():
     rotate(os.path.join(HERE, "crash.log"))
     # The game's own log, which is where its printed tracebacks land.
     import glob
-    for game_log in glob.glob(os.path.join(HERE, "rundir", "*.log")):
+    for game_log in glob.glob(os.path.join(HERE, "rundir" + suffix, "*.log")):
         rotate(game_log)
     _stub.LOG.open(log_path)
     _stub.LOG.note("=== %s ===" % manifest.get("title", "unknown game"))
@@ -499,7 +506,11 @@ def main():
     # working directory, so running from the install would litter -- and
     # mutate -- a copy the player owns.  Assets do not care: the resource
     # layer resolves them through absolute paths from the manifest.
-    rundir = os.path.join(HERE, "rundir")
+    rundir = os.path.join(HERE, "rundir" + suffix)
+    if suffix:
+        import mp3, bink
+        mp3.CACHE = os.path.join(HERE, "cache" + suffix, "audio")
+        bink.CACHE = os.path.join(HERE, "cache" + suffix, "movies")
     if not os.path.isdir(rundir):
         os.makedirs(rundir)
     os.chdir(rundir)

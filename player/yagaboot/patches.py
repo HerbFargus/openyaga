@@ -81,6 +81,9 @@ PATCHES = [
     },
     {
         "module": "python_shared/adventure/cursor",
+        # Putt-Putt's cursor.py is a later revision that clears the hourglass
+        # differently; this fix is written against Pajama Sam 4's.
+        "games": ["pajama4"],
         "why": "clearing the hourglass dropped a held item's cursor, and "
                "the next click crashed",
         "pattern": re.compile(
@@ -181,10 +184,16 @@ def patches_for(module):
     return [p for p in PATCHES if p["module"] == module]
 
 
-def apply(module, text):
-    """Returns (text, applied, problems) for one recovered module."""
+def apply(module, text, game_id=None):
+    """Returns (text, applied, problems) for one recovered module.
+
+    A patch with "games" applies only to those games (by the id identify()
+    gives): the Yaga titles share modules like cursor.py, but not always the
+    same version of them."""
     applied, problems = [], []
     for patch in patches_for(module):
+        if "games" in patch and game_id not in patch["games"]:
+            continue
         found = len(patch["pattern"].findall(text))
         if found != patch["expect"]:
             problems.append("%s: matched %d times, expected %d -- %s"

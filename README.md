@@ -73,8 +73,12 @@ See [player/README.md](player/README.md) for the design.
 
 ## What doesn't work yet
 
-- **The other four Yaga games are untested.** Everything was built against
-  Pajama Sam 4; Putt-Putt and the Backyard titles may need more of the engine.
+- **Putt-Putt: Pep's Birthday Surprise boots**, with no game-specific code:
+  setup recovers all 182 modules, and it plays the logos and intro movie and
+  reaches its first room, the garage. It has not been played further yet.
+  Set it up as a second game with `setup_game.py --game pbs` and run it with
+  `run_game.py --game pbs`.
+- **The Backyard titles are untested.**
 - **SDL2 is new.** This branch moves the player to SDL2 (pygame 2), for a
   resizable window, fullscreen and integer scaling; v0.1 is the SDL 1.2
   build.

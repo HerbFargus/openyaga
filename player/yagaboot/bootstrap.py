@@ -27,6 +27,9 @@ from . import constfix, elsefix, lostelse, patches, pyz
 KNOWN_GAMES = {
     ("rooms.he", "4ad491932a603d639bad658695d0827d"):
         ("pajama4", "Pajama Sam 4: Life Is Rough When You Lose Your Stuff"),
+    # Not from ScummVM's table, which has no entry for it yet.
+    ("rooms.he", "8db59e429f9e58673c8b2df431e5955a"):
+        ("puttpbs", "Putt-Putt: Pep's Birthday Surprise"),
 }
 
 MD5_BYTES = 5000
@@ -190,7 +193,7 @@ def clean_source(path: str) -> int:
     return removed
 
 
-def apply_patches(path, module, pyc_path=None):
+def apply_patches(path, module, pyc_path=None, game_id=None):
     """Repair decompiler mistakes in one recovered module.
 
     First the general repair -- list literals holding constant-pool indices
@@ -214,7 +217,7 @@ def apply_patches(path, module, pyc_path=None):
         except Exception as exc:
             applied_general = ["%s: const repair skipped (%s)" % (module, exc)]
 
-    fixed, applied, problems = patches.apply(module, text)
+    fixed, applied, problems = patches.apply(module, text, game_id)
     applied = applied_general + applied
     problems = general_problems + problems
     if fixed != original:
@@ -223,7 +226,7 @@ def apply_patches(path, module, pyc_path=None):
     return applied, problems
 
 
-def decompile(pyc_dir: str, src_dir: str, verbose: bool = False):
+def decompile(pyc_dir: str, src_dir: str, verbose: bool = False, game_id=None):
     """Recover .py source from the extracted .pyc files.
 
     Returns (ok, failures, patched, patch_problems).
@@ -251,7 +254,7 @@ def decompile(pyc_dir: str, src_dir: str, verbose: bool = False):
                     decompile_file(src, out)
                 clean_source(dest)
                 module = rel[:-3].replace("\\", "/")
-                applied, problems = apply_patches(dest, module, src)
+                applied, problems = apply_patches(dest, module, src, game_id)
                 patched.extend(applied)
                 patch_problems.extend(problems)
                 ok += 1
@@ -298,7 +301,7 @@ def prepare(game_dir: str, cache_dir: str, verbose: bool = False):
 
     total_pyc = sum(1 for _d, _s, fs in os.walk(pyc_dir) for f in fs if f.endswith(".pyc"))
     print("decompiling...")
-    ok, failures, patched, patch_problems = decompile(pyc_dir, src_dir, verbose)
+    ok, failures, patched, patch_problems = decompile(pyc_dir, src_dir, verbose, game_id)
     print("recovered  : %d of %d compiled modules" % (ok, total_pyc))
     for mod, why in failures:
         print("   FAILED %s -- %s" % (mod, why))

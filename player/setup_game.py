@@ -17,8 +17,14 @@ def main():
     ap.add_argument("game_dir", help="folder holding the game .exe")
     ap.add_argument("--cache", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "gamecache"),
                     help="where to put the prepared scripts (default: ./gamecache)")
+    ap.add_argument("--game", metavar="TAG",
+                    help="a second game: put it in gamecache-TAG, and run it "
+                         "with run_game.py --game TAG")
     ap.add_argument("-v", "--verbose", action="store_true")
     args = ap.parse_args()
+    if args.game:
+        args.cache = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                  "gamecache-" + args.game)
 
     m = bootstrap.prepare(args.game_dir, args.cache, args.verbose)
     print()
