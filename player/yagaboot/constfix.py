@@ -51,8 +51,13 @@ def _paths_by_offset(source):
             while stack and stack[-1][0] >= indent:
                 stack.pop()
             stack.append((indent, m.group(2)))
-        elif line.strip() and not line[:1].isspace():
-            stack = []                      # back to module level
+        elif line.strip():
+            # A line no deeper than a def has left that def's body -- back
+            # to the enclosing function after a nested def, or to module
+            # level.
+            indent = len(line.expandtabs()) - len(line.expandtabs().lstrip())
+            while stack and stack[-1][0] >= indent:
+                stack.pop()
         marks.append((offset, "/" + "/".join(n for _i, n in stack) if stack else ""))
         offset += len(line)
     return marks

@@ -20,7 +20,7 @@ import os
 import re
 import time
 
-from . import constfix, elsefix, patches, pyz
+from . import constfix, elsefix, lostelse, patches, pyz
 
 # ScummVM-style identification: md5 of the first 5000 bytes of a key data file.
 # These match the detection entries on the ScummVM 'yaga' branch.
@@ -199,7 +199,7 @@ def apply_patches(path, module, pyc_path=None):
     with open(path, encoding="utf-8") as fh:
         original = text = fh.read()
 
-    applied_general = []
+    applied_general, general_problems = [], []
     if pyc_path and os.path.isfile(pyc_path):
         try:
             from xdis import load_module
@@ -208,11 +208,15 @@ def apply_patches(path, module, pyc_path=None):
             applied_general = ["%s: const-index list %s" % (module, f) for f in fixes]
             text, else_fixes = elsefix.repair(text, code)
             applied_general += ["%s: %s" % (module, f) for f in else_fixes]
+            text, lost_fixes, lost_problems = lostelse.repair(text, code)
+            applied_general += ["%s: %s" % (module, f) for f in lost_fixes]
+            general_problems = ["%s: %s" % (module, p) for p in lost_problems]
         except Exception as exc:
             applied_general = ["%s: const repair skipped (%s)" % (module, exc)]
 
     fixed, applied, problems = patches.apply(module, text)
     applied = applied_general + applied
+    problems = general_problems + problems
     if fixed != original:
         with open(path, "w", encoding="utf-8") as fh:
             fh.write(fixed)

@@ -35,39 +35,6 @@ from __future__ import annotations
 import re
 
 PATCHES = [
-    # A lost `else:` -- the fourth way uncompyle6 gets this game wrong.  An
-    # `else:` whose body opens with an `if` was folded into `elif`, and the
-    # statement after that inner `if` was dedented out of the else block
-    # altogether, so it ran on every path.  The bytecode says otherwise:
-    #
-    #     69  JUMP_IF_FALSE  (to 72)       if putty on cursor:
-    #     70  ... UsePutty ...  JUMP_FORWARD (to 125)
-    #     73  ... currentAnimation != currentRoot ... SetInRoot
-    #     76  115 LOAD_ATTR GenericUseDialog  ... CALL_FUNCTION
-    #         125 LOAD_CONST None / RETURN_VALUE
-    #
-    # The putty branch jumps to 125, past GenericUseDialog at 115, so the
-    # generic reply belongs to the else.  As decompiled, using the putty on
-    # Sam ran UsePutty and then the generic reply as well -- by which time
-    # the putty had left the cursor, so it fell through to "I don't think
-    # that's going to work" over the top of the putty scene.
-    {
-        "module": "samCharacter",
-        "why": "Sam.Use lost an else: the generic reply ran after UsePutty too",
-        "pattern": re.compile(
-            r"        if globals\.g_Cursor\.QueryItemOnCursor\('putty_no_image'\):\n"
-            r"            self\.UsePutty\(\)\n"
-            r"        elif self\.currentAnimation != self\.currentRoot:\n"
-            r"            self\.SetInRoot\(\)\n"
-            r"        self\.GenericUseDialog\(\)\n"),
-        "replacement": ("        if globals.g_Cursor.QueryItemOnCursor('putty_no_image'):\n"
-                        "            self.UsePutty()\n"
-                        "        else:\n"
-                        "            if self.currentAnimation != self.currentRoot:\n"
-                        "                self.SetInRoot()\n"
-                        "            self.GenericUseDialog()\n"),
-        "expect": 1,
-    },
     # Not a decompiler mistake: the bytecode really does build an empty list.
     # But every other use of preloadHandles is a dict -- has_key, item
     # assignment, .values() -- and PreloadForRoom itself resets it to {}.  The
