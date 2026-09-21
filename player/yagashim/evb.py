@@ -56,14 +56,24 @@ animations the naming is consistent:
     0x020 D (C)  0x080 M    0x100 TH   0x200 F     0x400 UH
 
 An event sets the mouth and it holds until the next one -- these are state
-changes, not pulses.  Mask 0 is the closed mouth between words.  The last
-event always lands just inside the audio: 1.80s against 1.95s, 2.47s against
-2.63s, 2.33s against 2.47s.
+changes, not pulses.  The last event always lands just inside the audio:
+1.80s against 1.95s, 2.47s against 2.63s, 2.33s against 2.47s.
 
-Two loose ends there, both real.  Bit 0x040 is used by nothing, in any
-animation or any event.  Mask 0x800 appears in 30 events and matches no layer
-in any animation in the game -- a mouth shape cut from the art but left in
-the tracks; those events draw no mouth.
+**Mask 0 is silence, and it has to be drawn as the rest pose.**  A talking
+character's head is itself three masked layers -- ROOT_HEAD (ROOT, U, C, TH,
+UH), STRETCH (A, OH), SQUASH (EE, M, F) -- which between them cover every
+bit but 0x040 and 0x800.  So a literal mask of 0 matches none of them, and
+the whole head vanishes.  It is not rare: 3,384 of the 36,402 lipsync events
+are 0, and a line like "All in a day's work for a superhero" goes to 0 six
+times, including a 400 ms gap after its first sound.  The original cannot
+have drawn it literally.  The runs of repeated zeros before a line's final
+ROOT (0, 0, 0, then 0x1) read as a lipsync tool sampling at a fixed rate
+and writing 0 where it heard nothing -- silence, which is the closed mouth.
+
+The same goes for the two bits no art uses.  Bit 0x040 appears nowhere.
+Mask 0x800 appears in 30 events and matches no layer in any animation -- a
+mouth shape cut from the art but left in the tracks.  Drawn literally, it
+too would leave the character headless.
 
 **15500, animation events** (2,384), which is `globals.TYPE_ANIMATION_EVENT`.
 These carry the groups.  Every room stream opens with one at t=0 naming its
@@ -92,6 +102,20 @@ PHONEMES = {
     0x001: "ROOT", 0x002: "A", 0x004: "EE", 0x008: "OH", 0x010: "U",
     0x020: "D", 0x080: "M", 0x100: "TH", 0x200: "F", 0x400: "UH",
 }
+
+
+# Every bit some talking animation actually draws.
+DRAWN = 0x001 | 0x002 | 0x004 | 0x008 | 0x010 | 0x020 | 0x080 | 0x100 | 0x200 | 0x400
+ROOT = 0x001
+
+
+def effective(mask):
+    """The mask to draw for an event: silence and unused bits become ROOT.
+
+    Anything that would match no mouth -- and so, because the head is made
+    of masked layers too, no head -- is drawn as the rest pose instead.
+    """
+    return mask if (mask & DRAWN) else ROOT
 
 
 def describe(mask):

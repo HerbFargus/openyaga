@@ -582,7 +582,9 @@ class IEventStream(object):
             if event.time > elapsed:
                 break
             if event.type == evb.EVENT_LIPSYNC:
-                mask = event.param
+                # Silence is drawn as the closed mouth; drawn literally, a
+                # mask of 0 takes the head with it (see evb.py).
+                mask = evb.effective(event.param)
         return mask
 
     def EventData(self, index):

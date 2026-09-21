@@ -244,8 +244,17 @@ go backwards, and the last event always lands just inside its audio (1.80s
 against 1.95s; 2.47s against 2.63s; 2.33s against 2.47s).
 
 An event sets the mouth and it holds until the next one — these are state
-changes, not pulses. Mask `0` means show no mouth layer at all, which is the
-closed mouth between words.
+changes, not pulses.
+
+**Mask `0` is silence, and must be drawn as `ROOT`, not literally.** The
+head is itself made of masked layers — `ROOT_HEAD`, `STRETCH`, `SQUASH` —
+which between them cover every bit but `0x040` and `0x800`. A literal `0`
+matches none of them, so the whole head vanishes. It is common: 3,384 of the
+36,402 lipsync events are `0`, and "All in a day's work for a superhero" goes
+to `0` six times. The runs of repeated zeros before a line's closing `ROOT`
+(`0, 0, 0, 0x1`) read as a lipsync tool sampling at a fixed rate and writing
+`0` where it heard nothing. The first playthrough found this: the player
+drew it literally and Sam's head blinked in and out as he spoke.
 
 ### Type 15500 — animation events (2,384 events)
 
@@ -279,8 +288,9 @@ Two loose ends, both real:
 
 - Bit `0x040` is used by nothing — no animation layer, no event.
 - Mask `0x800` appears in 30 events and matches no layer in any animation in
-  the game: a mouth shape cut from the art but left in the tracks. Those
-  events draw no mouth.
+  the game: a mouth shape cut from the art but left in the tracks. Drawn
+  literally it would take the head with it, like `0`, so it is drawn as
+  `ROOT` too.
 
 ## The XML data
 
