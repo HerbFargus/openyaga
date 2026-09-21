@@ -19,12 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-This licence covers only the code and documentation in this repository.
-
-It does not cover Pajama Sam 4: Life Is Rough When You Lose Your Stuff, or
-any other Yaga engine game, or any of their data. Those remain the property
-of their rights holders. This repository contains no game code and no game
-assets, and requires you to supply your own copy of the game.

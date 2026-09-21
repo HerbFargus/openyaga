@@ -98,6 +98,8 @@ portable. Nothing here is upstreamable to ScummVM — only the knowledge is.
 
 MIT, for the code and documentation here. See [LICENSE](LICENSE).
 
-That covers this repository only. Pajama Sam 4 and the other Yaga games remain
-the property of their rights holders; nothing of theirs is included here, and
-you supply your own copy of the game.
+That covers the code and documentation in this repository only. It does not
+cover Pajama Sam 4: Life Is Rough When You Lose Your Stuff, any other Yaga
+engine game, or any of their data -- those remain the property of their rights
+holders. This repository contains no game code and no game assets, and you
+supply your own copy of the game.
