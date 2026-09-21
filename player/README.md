@@ -59,7 +59,7 @@ Ubuntu); setup names them.
 
 | Platform | Status |
 |---|---|
-| Linux x86_64 | tested (Ubuntu 26.04 under WSL) |
+| Linux x86_64 | tested (Ubuntu 26.04 under WSL): picture, music, dialogue, effects, replay |
 | macOS, Intel | prebuilt Python 2.7 and pygame; untested |
 | macOS, Apple Silicon | the Intel build under Rosetta; neither Python 2.7 nor its pygame exists for arm64; untested |
 | Linux ARM | Python 2.7 is prebuilt, pygame builds from source (needs the SDL2 dev packages); untested |
