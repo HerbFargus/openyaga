@@ -76,9 +76,8 @@ _mod = _stub.StubModule(__name__)
 class IVideoElement(object):
     """A Bink movie -- the .da2 files, which are BIK video.
 
-    Decoding Bink is out of reach here, but the header is simple and tells us
-    frame count and frame rate, so a movie occupies exactly as long as it
-    really runs and the game advances on its own schedule:
+    The header gives the shape of the thing without decoding anything, and is
+    what the movie is timed by:
 
         offset 0   "BIK" + version byte
                8   frame count
@@ -87,8 +86,11 @@ class IVideoElement(object):
 
     scene_helogo watches CBinkSprite.IsFinished(), which is
     `binkVideo.isPlaying == false`, to move from the Atari logo to the
-    Humongous one and then into the game.  Nothing is drawn: a black screen
-    for the right duration is honest, where a frozen frame would not be.
+    Humongous one and then into the game.  So the clock here is authoritative:
+    the movie runs for exactly as long as its header says, whether or not the
+    pictures keep up.  bink.Movie does the decoding and hands back whichever
+    frame is due; without ffmpeg there are no frames and this is a black
+    screen for the right duration, as it was before.
     """
 
     def __init__(self, res=None):
@@ -111,6 +113,11 @@ class IVideoElement(object):
         self.duration = (self.frames / self.fps) if self.fps else 0.0
         if _stub.SKIP_VIDEO:
             self.duration = 0.0
+        self.movie = None
+        if not _stub.SKIP_VIDEO and self.width and self.height:
+            import bink
+            self.movie = bink.Movie(self.path, data,
+                                    self.width, self.height, self.fps)
         _videos.append(self)
         _stub.LOG.record("new", "yagasprite.IVideoElement",
                          "(%s) %dx%d, %d frames at %.1f fps = %.1fs"
@@ -121,6 +128,15 @@ class IVideoElement(object):
         if name.startswith("__"):
             raise AttributeError(name)
         return _stub.Stub("yagasprite.IVideoElement.%s" % name)
+
+    def __setattr__(self, name, value):
+        """CBinkSprite.SetVolume writes straight through to `volume`, and the
+        options screen does it while a movie is already running."""
+        object.__setattr__(self, name, value)
+        if name == "volume":
+            movie = self.__dict__.get("movie")
+            if movie is not None:
+                movie.SetVolume(value)
 
     @property
     def isPlaying(self):
@@ -135,15 +151,34 @@ class IVideoElement(object):
 
     def Run(self, scene=None, *a, **kw):
         self._playing = True
+        if self.movie is not None:
+            self.movie.Start()
+            self.movie.SetVolume(self.volume)
+        # Started after the decoder, so the first frame is not already late.
         self._started = time.time()
         _stub.LOG.record("call", "yagasprite.IVideoElement.Run",
                          "(%s for %.1fs)" % (self.path, self.duration))
 
     def Stop(self, scene=None, *a, **kw):
         self._playing = False
+        if self.movie is not None:
+            self.movie.Stop()
 
     def Render(self, camera=None, *a, **kw):
-        pass
+        """Draw whichever frame is due.
+
+        The game calls this through CBinkSprite.Render, once a frame, for as
+        long as the movie is playing.
+        """
+        if self.movie is None or not self._playing or self._started is None:
+            return
+        import yagagraphics
+        surface = yagagraphics.target_surface()
+        if surface is None:
+            return
+        frame = self.movie.surface_at(time.time() - self._started)
+        if frame is not None:
+            surface.blit(frame, (0, 0))
 
     def __nonzero__(self):
         return True

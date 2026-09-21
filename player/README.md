@@ -100,23 +100,32 @@ C:\Python27\python.exe run_game.py
 Opens a 640x480 window and boots the game the way it boots itself: Atari logo,
 Humongous logo, then the first room. Escape or closing the window quits.
 
-**Dialogue needs ffmpeg.** SDL_mixer 1.2 decodes MP3 only on its single music
-channel, and this game's 1,389 lines of dialogue are MP3 -- as is the score.
-Left to collide, a line kills the music, the music manager restarts the score
-on the next tick, and the line dies in the frame it began. So dialogue is
-decoded to PCM and mixed as an ordinary sound, which is what the original
-engine did. ffmpeg is looked for in `OPENYAGA_FFMPEG`, then on `PATH`, then as
-`player/ffmpeg.exe`, then in the usual install directories. Without it the
-player still runs, with the old behaviour: lines cut the music and each other.
+**Dialogue and movies need ffmpeg.** SDL cannot open either format the game
+ships them in, so both go through ffmpeg. It is looked for in
+`OPENYAGA_FFMPEG`, then on `PATH`, then as `player/ffmpeg.exe`, then in the
+usual install directories -- dropping a copy beside `run_game.py` needs no
+configuration at all. Nothing is bundled. Without it the player still runs,
+with the old behaviour described below each heading.
 
-Decoded lines are cached under `player/cache/audio`, about 115 KB each, so a
-line costs ~57 ms the first time it is spoken and nothing after that.
+*Dialogue.* SDL_mixer 1.2 decodes MP3 only on its single music channel, and
+this game's 1,389 lines of dialogue are MP3 -- as is the score. Left to
+collide, a line kills the music, the music manager restarts the score on the
+next tick, and the line dies in the frame it began. So dialogue is decoded to
+PCM and mixed as an ordinary sound, which is what the original engine did.
+Lines are cached under `player/cache/audio` at about 115 KB each: ~57 ms the
+first time a line is spoken, nothing after that. *Without ffmpeg:* lines cut
+the music and each other.
 
-**Movies are a black screen.** Bink is not decoded, so a movie occupies its
-real running time with nothing drawn -- and the intro is 172 seconds, during
-which the game is waiting and nothing responds. Click or press a key to cut one
-short, or start with `--skip-video` to treat every movie as zero length, which
-takes you to the bedroom where play actually begins.
+*Movies.* The 40 `.da2` files are Bink 1 (`BIKi`), 640x480, which ffmpeg
+decodes. Frames are streamed in as raw RGB and blitted straight to the screen
+-- caching them would cost 1.5 GB for the intro alone -- while the soundtrack
+is decoded once to `player/cache/movies` and played as a chunk. Frames are
+timed off the wall clock, so a slow moment costs one frame instead of putting
+a 172-second movie out of step with its own audio. It costs about 1.6 ms a
+frame. *Without ffmpeg:* a movie is a black screen for its real running time.
+
+Either way a click or a key cuts a movie short, and `--skip-video` treats every
+movie as zero length, which takes you straight to the bedroom.
 
 | | |
 |---|---|

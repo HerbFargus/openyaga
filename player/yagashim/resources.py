@@ -88,6 +88,30 @@ def read(path):
     return None
 
 
+def locate(path):
+    """The real file behind a game path, when there is one.
+
+    Bink movies are loose files in the install rather than archive members,
+    and ffmpeg would much rather open a file it can seek in than be fed 105 MB
+    down a pipe.  Returns None for anything that only exists inside a .he.
+    """
+    p = _normalise(path)
+    for root in [None] + _loose:
+        candidate = p if root is None else os.path.join(root, p)
+        if os.path.isfile(candidate):
+            return candidate
+
+    wanted = p.lower()
+    for root in _loose:
+        for dirpath, _dirs, files in os.walk(root):
+            for f in files:
+                full = os.path.join(dirpath, f)
+                rel = os.path.relpath(full, root).replace("\\", "/").lower()
+                if rel == wanted:
+                    return full
+    return None
+
+
 def exists(path):
     return read(path) is not None
 
