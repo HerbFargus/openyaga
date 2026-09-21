@@ -39,7 +39,63 @@ class Point(object):
         return "Point(%s, %s, %s)" % (self.x, self.y, self.z)
 
 
+class Rect(object):
+    """What sprite.renderRect is: utility.OverSprite reads .x/.y/.width/.height."""
+
+    def __init__(self, x=0, y=0, width=0, height=0):
+        self.x, self.y = x, y
+        self.width, self.height = width, height
+
+    def __repr__(self):
+        return "Rect(%s, %s, %sx%s)" % (self.x, self.y, self.width, self.height)
+
+
+class PointCollider(object):
+    """Created by the scene for hit tests: spriteScene.CreatePointCollider."""
+
+    def __init__(self, x=0, y=0, z=0):
+        self.x, self.y, self.z = x, y, z
+
+
+class Scene(_stub.Stub):
+    def __init__(self):
+        _stub.Stub.__init__(self, "yagascene.Scene")
+
+    def CreatePointCollider(self, x=0, y=0, z=0):
+        return PointCollider(x, y, z)
+
+    def __nonzero__(self):
+        return True
+
+
+class SceneManager(_stub.Stub):
+    """Only CreateScene is real; everything else still auto-stubs."""
+
+    def __init__(self):
+        _stub.Stub.__init__(self, "yagascene.SceneManager()")
+
+    def CreateScene(self, *a, **kw):
+        return Scene()
+
+    def __nonzero__(self):
+        return True
+
+
+_manager = None
+
+
+def SceneManagerFactory():
+    global _manager
+    if _manager is None:
+        _manager = SceneManager()
+    return _manager
+
+
 _mod.Point = Point
+_mod.Rect = Rect
+_mod.PointCollider = PointCollider
+_mod.Scene = Scene
+_mod.SceneManager = SceneManagerFactory
 
 _mod.__wrapped_module__ = sys.modules[__name__]
 sys.modules[__name__] = _mod

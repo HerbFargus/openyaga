@@ -25,3 +25,10 @@ extracted-cards/
 __pycache__/
 *.pyc
 *.pyo
+player/a5.png
+player/a45.png
+player/anim_*.png
+player/chk_*.png
+player/in1.png
+player/noclick.png
+player/click.png

@@ -18,6 +18,7 @@ the trace.
 """
 
 import sys
+import time
 
 import pygame
 
@@ -66,15 +67,57 @@ class ISprite(_stub.Stub):
         self.hFlip = 0
         self.vFlip = 0
         self.visible = 1
+        self._playing = False
+        self._started = None
+        self._anim_id = None
+        self._drawn = []          # (layer, screen x, screen y) from the last frame
         # Not a list: the game sets attributes on it, e.g.
         # `sprite.talkies.continuous = true`.
         self.talkies = _stub.Stub("%s.talkies" % name)
 
-    def Run(self, *a, **kw):
-        _stub.LOG.record("call", "%s.Run" % self._yaga_name, _stub._args(a, kw))
+    def Run(self, scene=None, *a, **kw):
+        """Start playing.  Sprites do not animate until asked.
+
+        Idempotent on purpose: the game calls Run every loop iteration, and
+        restarting the clock each time pins every animation on frame 0.
+
+        That is faithful rather than lazy: only characters call Run, so a
+        clickpoint sits on its first frame until something activates it,
+        which is what the game expects.
+        """
+        if not self._playing:
+            self._playing = True
+            self._started = time.time()
+            _stub.LOG.record("call", "%s.Run" % self._yaga_name,
+                             "(%s)" % _stub._brief(scene))
 
     def Stop(self, *a, **kw):
+        self._playing = False
         _stub.LOG.record("call", "%s.Stop" % self._yaga_name, _stub._args(a, kw))
+
+    def _advance(self, frame_count):
+        """Step currentFrame according to elapsed time, not frames drawn.
+
+        The loop runs at DEFAULT_FPS (10) but is not guaranteed to, and an
+        animation carries its own rate, so timing off the clock keeps playback
+        at the intended speed either way.
+        """
+        if not self._playing or frame_count < 2:
+            return
+        # A new animation on the same sprite starts from its first frame.
+        if self._anim_id != id(self.anim):
+            self._anim_id = id(self.anim)
+            self._started = time.time()
+        fps = getattr(self.anim, "framesPerSecond", 10) or 10
+        elapsed = time.time() - (self._started or time.time())
+        step = int(elapsed * fps)
+        if self.loopCount:
+            limit = int(self.loopCount) * frame_count
+            if step >= limit:
+                self._playing = False
+                self.currentFrame = frame_count - 1
+                return
+        self.currentFrame = step % frame_count
 
     def SetLayerFlag(self, *a, **kw):
         _stub.LOG.record("call", "%s.SetLayerFlag" % self._yaga_name, _stub._args(a, kw))
@@ -82,7 +125,22 @@ class ISprite(_stub.Stub):
     def SetVolume(self, *a, **kw):
         pass
 
-    def Intersect(self, *a, **kw):
+    def Intersect(self, collider=None, *a, **kw):
+        """Per-pixel hit test, which is what the game expects.
+
+        utility.OverSprite checks renderRect first and only then calls this,
+        "paying attention to transparency" -- so a click lands on a character
+        only where it is actually opaque, not anywhere in its bounding box.
+        """
+        x, y = getattr(collider, "x", None), getattr(collider, "y", None)
+        if x is None or y is None or not self._drawn:
+            return 0
+        for layer, ox, oy in self._drawn:
+            lx, ly = int(x) - ox, int(y) - oy
+            if 0 <= lx < layer.w and 0 <= ly < layer.h:
+                alpha = layer.rgba[(ly * layer.w + lx) * 4 + 3]
+                if alpha:
+                    return 1
         return 0
 
     def Render(self, camera=None):
@@ -102,16 +160,27 @@ class ISprite(_stub.Stub):
         if surface is None or inner is None or not inner.frames:
             return
 
+        self._advance(len(inner.frames))
         index = int(self.currentFrame or 0) % len(inner.frames)
         ox, oy = int(self.position.x or 0), int(self.position.y or 0)
+        self._drawn = []
         drawn = 0
         for layer in inner.frames[index].layers:
             if layer.rgba is None or not layer.w or not layer.h:
                 continue
             if layer.mask and not (layer.mask & PHONEME_REST):
                 continue
-            surface.blit(_surface_for(layer), (ox + layer.x, oy + layer.y))
+            lx, ly = ox + layer.x, oy + layer.y
+            surface.blit(_surface_for(layer), (lx, ly))
+            self._drawn.append((layer, lx, ly))
             drawn += 1
+        if self._drawn:
+            import yagascene
+            x1 = min(x for _l, x, _y in self._drawn)
+            y1 = min(y for _l, _x, y in self._drawn)
+            x2 = max(x + l.w for l, x, _y in self._drawn)
+            y2 = max(y + l.h for l, _x, y in self._drawn)
+            self.renderRect = yagascene.Rect(x1, y1, x2 - x1, y2 - y1)
         if drawn:
             _stub.LOG.record("call", "%s.Render" % self._yaga_name,
                              "(%s frame %d, %d layers)"

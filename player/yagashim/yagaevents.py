@@ -84,12 +84,38 @@ class EInputEvent(object):
 
 
 class Event(object):
-    def __init__(self, eventClass, eventType):
+    """The fields the game reads: see pj_input_manager.InputHandler and
+    cursor.CCursor.InputHandler."""
+
+    def __init__(self, eventClass, eventType, value=0, elementID=0, deviceID=0):
         self.eventClass = eventClass
         self.eventType = eventType
+        self.value = value
+        self.elementID = elementID
+        self.deviceID = deviceID
 
     def __repr__(self):
-        return "<Event %s/%s>" % (self.eventClass, self.eventType)
+        return "<Event %s/%s value=%r>" % (self.eventClass, self.eventType, self.value)
+
+
+class EventSource(_stub.Stub):
+    """What GetEventSource returns -- a mouse, keyboard or gamepad.
+
+    input_manager asserts on it, so it must be truthy, and sets .handled and
+    .flags on it.
+    """
+
+    def __init__(self, eventClass, index):
+        _stub.Stub.__init__(self, "yagaevents.EventSource(%s,%d)" % (eventClass, index))
+        self.handled = 0
+        self.flags = 0
+
+    def __nonzero__(self):
+        return True
+
+
+def IEventSource(target=None):
+    return EventSource("render_target", 0)
 
 
 class IEventReciever(_stub.Stub):
@@ -127,6 +153,7 @@ class EventManager(_stub.Stub):
         self._timers = []
         self._running = False
         self._receivers = []
+        self._sources = {}
         self.frames = 0
         # Set by run_game.py: stop after N frames, for headless checking.
         self.frame_limit = _stub.FRAME_LIMIT
@@ -150,12 +177,77 @@ class EventManager(_stub.Stub):
         pass
 
     # -- receivers ---------------------------------------------------------
-    def RegisterEventReciever(self, receiver, *a, **kw):
-        self._receivers.append(receiver)
+    def RegisterEventReciever(self, classes, receiver=None, *a, **kw):
+        _stub.LOG.record("call", "yagaevents.EventManager.RegisterEventReciever",
+                         "(%s)" % _stub._brief(receiver))
+        """Note the argument order: input_manager calls
+        `em.RegisterEventReciever(seq, self)` -- the event classes first."""
+        if receiver is not None and receiver not in self._receivers:
+            self._receivers.append(receiver)
 
-    def UnregisterEventReciever(self, receiver, *a, **kw):
+    def UnregisterEventReciever(self, receiver=None, *a, **kw):
         if receiver in self._receivers:
             self._receivers.remove(receiver)
+
+    def GetEventSource(self, eventClass, index=0):
+        # Only one mouse and one keyboard; no gamepads, so index 0 only.
+        if index != 0:
+            return None
+        key = (eventClass, index)
+        if key not in self._sources:
+            self._sources[key] = EventSource(eventClass, index)
+        return self._sources[key]
+
+    def _dispatch(self, event):
+        for receiver in list(self._receivers):
+            try:
+                receiver.Raise(event)
+            except Exception, exc:
+                _stub.LOG.record("call", "yagaevents.dispatch",
+                                 "-> %s: %s" % (type(exc).__name__, exc))
+
+    def _inject_test_click(self):
+        """Post a synthetic move-and-click, so input can be exercised without
+        a person at the keyboard.  Driven by run_game.py --click."""
+        if not _stub.CLICK_AT or self.frames != _stub.CLICK_FRAME:
+            return
+        x, y = _stub.CLICK_AT
+        _stub.LOG.record("call", "test.click", "(%d, %d)" % (x, y))
+        pygame.event.post(pygame.event.Event(
+            pygame.MOUSEMOTION, pos=(x, y), rel=(0, 0), buttons=(0, 0, 0)))
+        pygame.event.post(pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN, pos=(x, y), button=1))
+        pygame.event.post(pygame.event.Event(
+            pygame.MOUSEBUTTONUP, pos=(x, y), button=1))
+
+    def _pump_input(self):
+        """Translate pygame input into the events the game expects.
+
+        Mouse motion arrives as two separate axis events carrying the
+        coordinate in `value`; that is how cursor.CCursor tracks the pointer.
+        """
+        for ev in pygame.event.get():
+            if ev.type == pygame.QUIT:
+                self.StopEventLoop()
+            elif ev.type == pygame.KEYDOWN and ev.key == pygame.K_ESCAPE:
+                self.StopEventLoop()
+            elif ev.type == pygame.MOUSEMOTION:
+                self._dispatch(Event(EEventClass.CLASS_MOUSE,
+                                     EInputEvent.IEVENT_AXIS_POS_X, value=ev.pos[0]))
+                self._dispatch(Event(EEventClass.CLASS_MOUSE,
+                                     EInputEvent.IEVENT_AXIS_POS_Y, value=ev.pos[1]))
+            elif ev.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
+                kind = (EInputEvent.IEVENT_BUTTON_DOWN
+                        if ev.type == pygame.MOUSEBUTTONDOWN
+                        else EInputEvent.IEVENT_BUTTON_UP)
+                self._dispatch(Event(EEventClass.CLASS_MOUSE, kind,
+                                     elementID=ev.button - 1,
+                                     value=int(ev.type == pygame.MOUSEBUTTONDOWN)))
+            elif ev.type in (pygame.KEYDOWN, pygame.KEYUP):
+                kind = (EInputEvent.IEVENT_BUTTON_DOWN if ev.type == pygame.KEYDOWN
+                        else EInputEvent.IEVENT_BUTTON_UP)
+                self._dispatch(Event(EEventClass.CLASS_KEYBOARD, kind,
+                                     elementID=ev.key, value=1))
 
     # -- the loop ----------------------------------------------------------
     def StartEventLoop(self):
@@ -168,11 +260,8 @@ class EventManager(_stub.Stub):
         tick = Event(EEventClass.CLASS_TIMER, ETimerEvent.TIMER_TICK)
 
         while self._running:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.StopEventLoop()
-                elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                    self.StopEventLoop()
+            self._inject_test_click()
+            self._pump_input()
 
             for timer in list(self._timers):
                 receiver = timer.eventReciever
@@ -213,7 +302,25 @@ _mod.EInputEvent = EInputEvent
 _mod.Event = Event
 _mod.IEventReciever = IEventReciever
 _mod.Timer = Timer
-_mod.EventManager = EventManager
+_manager = None
+
+
+def EventManagerFactory():
+    """The engine's event manager is a singleton.
+
+    input_manager builds its own with `em = yagaevents.EventManager()` and
+    registers itself on that; if every call returned a fresh object those
+    receivers would be stranded on a throwaway and no input would arrive.
+    """
+    global _manager
+    if _manager is None:
+        _manager = EventManager()
+    return _manager
+
+
+_mod.EventManager = EventManagerFactory
+_mod.EventSource = EventSource
+_mod.IEventSource = IEventSource
 
 _mod.__wrapped_module__ = sys.modules[__name__]
 sys.modules[__name__] = _mod

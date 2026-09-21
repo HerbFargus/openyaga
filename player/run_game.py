@@ -30,6 +30,7 @@ def main():
                     help="stop after this many rendered frames")
     ap.add_argument("--screenshot", help="save the last frame here")
     ap.add_argument("--scene", help="start in this scene instead of the logo")
+    ap.add_argument("--click", help="inject a click at X,Y (for testing)")
     args = ap.parse_args()
 
     if sys.version_info[0] != 2:
@@ -65,6 +66,8 @@ def main():
     # player's game folder.
     _stub.FRAME_LIMIT = args.frames
     _stub.SCREENSHOT = os.path.abspath(args.screenshot) if args.screenshot else None
+    if args.click:
+        _stub.CLICK_AT = tuple(int(v) for v in args.click.split(","))
 
     # The game resolves data paths relative to the executable's folder.
     exe_dir = os.path.dirname(manifest["executable"])
