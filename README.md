@@ -36,15 +36,21 @@ the shipped data that break naive decoders.
 
 ## What doesn't work yet
 
-**`player/` — a standalone player. Early.**
+**`player/` — a standalone player. Early, but it runs.**
 
 Yaga is a C++ engine driving **Python 2.2** game scripts, which are bundled
 inside the game executable. So the game's *logic* needs no reimplementation —
 only the engine beneath it. The player reads the scripts out of the copy you
 own, then provides the eleven `yaga*` modules they import, backed by SDL.
 
-Currently: the loader works. It finds the executable, unpacks 183 modules,
-recovers them as source, and they all parse. Nothing renders yet.
+It boots unaided through the logos into the game, renders rooms and
+characters, takes mouse input, plays music, dialogue and sound effects, walks
+between rooms, and opens the inventory. Clickpoints animate and speak, and
+cutscenes hand control back when they end.
+
+Not yet: Bink video (the movies are skipped), subtitles, and the `.evb`/`.evt`
+lipsync streams. Expect rough edges — this has been driven through one game's
+opening, not played to the end.
 
 See [player/README.md](player/README.md) for the design and next steps.
 

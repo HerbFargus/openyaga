@@ -237,6 +237,40 @@ class TalkieList(_stub.Stub):
             if hasattr(sound, "Stop"):
                 sound.Stop(scene)
 
+    @property
+    def isPlaying(self):
+        """True while any line in the list is still being spoken.
+
+        This is what a cutscene waits on.  character.PlayTalkie returns the
+        sprite's talkie list rather than the sound itself, so the script ends
+        up polling the list:
+
+            self.soundObj = ...PlayTalkie(self.sound)     # -> sprite.talkies
+            ...
+            if self.soundObj.isPlaying:
+                return True                               # still playing
+
+        Without this the name resolved to an auto-created stub, which is
+        truthy for ever: the script item never finished, its callback never
+        ran, and whatever disabled the cursor for the cutscene never got to
+        re-enable it.  The game accepted clicks and dropped every one.
+        """
+        for sound in self._all():
+            if getattr(sound, "isPlaying", 0):
+                return 1
+        return 0
+
+    @property
+    def duration(self):
+        """Longest line in the list; script.py reads it off the same object."""
+        best = 0.0
+        for sound in self._all():
+            try:
+                best = max(best, float(getattr(sound, "duration", 0) or 0))
+            except (TypeError, ValueError):
+                continue
+        return best
+
     def __nonzero__(self):
         return True
 

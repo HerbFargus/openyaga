@@ -129,6 +129,53 @@ def install_click_probe():
 
     _cp.CClickPointInstance.Tick = tick_probe
 
+    # And every write to cursor.enabled, with the line that made it.  A
+    # cutscene disables the cursor and re-enables it when it ends; if the
+    # cursor stays off, the game is still waiting for something.
+    from python_shared.adventure import cursor as _cursor
+    import traceback as _tb
+
+    stack_log = os.path.join(HERE, "cursor_enabled.log")
+    open(stack_log, "w").close()
+
+    def cursor_setattr(self, name, value):
+        if name == "enabled":
+            _stub.LOG.record("set", "cursor.enabled",
+                             "= %s (stack in cursor_enabled.log)" % (value,))
+            f = open(stack_log, "a")
+            f.write("=== enabled = %s ===" % (value,) + chr(10))
+            f.writelines(_tb.format_stack()[:-1])
+            f.close()
+        self.__dict__[name] = value
+
+    _cursor.CCursor.__setattr__ = cursor_setattr
+
+    # And the script items, which is what a cutscene waits on before it hands
+    # control back.
+    from script_system import script as _script
+    was_playing = _script.CPlayListItem.isPlaying
+    seen_item = {}
+
+    def playing_probe(self):
+        result = was_playing(self)
+        sound = getattr(self, "soundObj", 0)
+        key = (id(self), bool(result))
+        if key not in seen_item:
+            seen_item[key] = True
+            _stub.LOG.record("call", "script.isPlaying",
+                             "%s -> %s  wait=%s sound=%s sound.isPlaying=%s "
+                             "anim=%s time=%s/%s"
+                             % (getattr(self, "soundFile", "?"), result,
+                                getattr(self, "wait", "?"),
+                                _stub._brief(sound),
+                                getattr(sound, "isPlaying", "-") if sound else "-",
+                                _stub._brief(getattr(self, "animObj", 0)),
+                                _stub._brief(getattr(getattr(self, "speakerObj", 0), "time", "-")),
+                                _stub._brief(getattr(getattr(self, "speakerObj", 0), "duration", "-"))))
+        return result
+
+    _script.CPlayListItem.isPlaying = playing_probe
+
 
 def _exit_quietly():
     """Leave without running the interpreter's shutdown.
