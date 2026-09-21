@@ -131,10 +131,15 @@ def main():
         x, y = (int(v) for v in coords.split(","))
         _stub.CLICKS.append((int(frame) if frame else 5 + n * 25, x, y))
 
-    # The game resolves data paths relative to the executable's folder.
-    exe_dir = os.path.dirname(manifest["executable"])
-    if os.path.isdir(exe_dir):
-        os.chdir(exe_dir)
+    # Run from our own directory, not the game's.  The game writes its saves
+    # to "./SaveGames" and its log to "./<project>.log", both relative to the
+    # working directory, so running from the install would litter -- and
+    # mutate -- a copy the player owns.  Assets do not care: the resource
+    # layer resolves them through absolute paths from the manifest.
+    rundir = os.path.join(HERE, "rundir")
+    if not os.path.isdir(rundir):
+        os.makedirs(rundir)
+    os.chdir(rundir)
 
     if args.scene:
         # globals.py needs the true/false builtins boot.py installs; set them

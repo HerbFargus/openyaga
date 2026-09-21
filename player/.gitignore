@@ -12,3 +12,4 @@ first_frame.png
 
 # Screenshots are frames of the game artwork. Never track them.
 *.png
+player/rundir/
