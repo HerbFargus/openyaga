@@ -108,6 +108,14 @@ def main():
     finally:
         # boot.py replaces stdout with its own redirector; take it back.
         sys.stdout, sys.stderr = real_stdout, real_stderr
+        # Only now: the game's Release() runs after the loop and still uses
+        # the mixer, so tearing pygame down any earlier breaks it.
+        try:
+            import yagasound, yagagraphics
+            yagasound.cleanup()
+            yagagraphics.shutdown()
+        except Exception:
+            pass
 
     report(_stub.LOG, outcome, log_path)
 
