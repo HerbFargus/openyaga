@@ -1,59 +1,102 @@
 # -*- coding: utf-8 -*-
-"""Repairs for places where the decompiler produced wrong data.
+"""Hand-written repairs for decompiler mistakes that cannot be fixed by rule.
 
-uncompyle6 gets the *structure* of this game right almost everywhere, but it
-can substitute constants -- emitting a list of integers where the bytecode
-holds a list of strings.  The result is valid Python that runs and misbehaves,
-so nothing but a comparison against the original bytecode will find it.
-`verify_decompile.py` is that comparison; this is where its findings get fixed.
+The bulk of what uncompyle6 gets wrong in this game is mechanical and handled
+by constfix.py: list literals holding constant-pool indices instead of the
+constants themselves.
 
-Each patch is checked when applied: if the pattern does not match exactly the
-expected number of times, setup says so rather than silently doing nothing.
-That matters because these are keyed to one build of one game, and a different
-release will not match.
+This file is for the rest.  Currently that is a single class of failure, seven
+occurrences: a Python 2 list comprehension accumulates into a temporary named
+`_[1]`, and where uncompyle6 cannot rebuild the comprehension it leaves that
+name in place -- losing the element expression completely:
 
-Replacement values are taken from `co_consts` in the original .pyc, in order.
+    xSum = reduce((lambda x, y: x + y), [_[1] for vector in vectors])
+
+The loop and the condition survive; only the value being collected is gone, so
+it cannot be inferred from the source.  Each replacement below was read out of
+the original bytecode, where the element expression sits between
+`LOAD_FAST _[1]` and the `CALL_FUNCTION` that appends it, e.g.
+
+    41  LOAD_FAST      _[1]
+    44  LOAD_FAST      vector
+    47  LOAD_ATTR      x          -> vector.x
+    50  CALL_FUNCTION  1
+
+Worth noting the obvious reading was wrong: `vector[0]` looks natural for a
+sum of x components, but the bytecode says attribute access.
+
+Each patch is checked when applied.  If a pattern does not match exactly the
+expected number of times, setup reports it rather than silently doing nothing,
+since these are keyed to one build of one game.
 """
 
 from __future__ import annotations
 
 import re
 
-# statusOf.SetTradingCards, from the bytecode: the 24 card asset names, in the
-# order the list literal declares them.  `val + 'CU'` then yields e.g.
-# 'pajamaManCU', which is the close-up art (pajamamancu.mng).
-CARD_NAMES = [
-    "fizzyPoppins", "evilUnderwear", "royalJelly", "admiralPeanutButter",
-    "cardboardWoman", "seriousBowler", "Pajamaputer", "remoteRemover",
-    "pajamamobile", "portableBadGuyContainer", "illuminatorMarkV", "darkness",
-    "drGrime", "malevolentMilkMolecules", "drScottBruvvers", "dustDevil",
-    "earthquake", "thunder", "lightning", "captainGelatin", "heroSandwich",
-    "clementine", "milkman", "pajamaMan",
-]
-
-# statusOf.InitializeTradingCards: the dictionary keys, likewise from consts.
-CARD_KEYS = ["trading_card%d" % i for i in range(1, 25)]
-
-
-def _as_list(values):
-    return "[" + ", ".join("'%s'" % v for v in values) + "]"
-
-
 PATCHES = [
+    # utility.AddVectors -- LOAD_ATTR x / y / z
     {
-        "module": "statusOf",
-        "why": "card dictionary keys decompiled as integers instead of "
-               "'trading_card1'...'trading_card24'",
-        "pattern": re.compile(r"\btradingCards = \[1, 2, 3,.*?24\]", re.S),
-        "replacement": "tradingCards = " + _as_list(CARD_KEYS),
+        "module": "python_shared/utility/utility",
+        "why": "AddVectors lost `vector.x` from its comprehension",
+        "pattern": re.compile(r"xSum = reduce\(\(lambda x, y: x \+ y\), "
+                              r"\[_\[1\] for vector in vectors\]\)"),
+        "replacement": "xSum = reduce((lambda x, y: x + y), "
+                       "[vector.x for vector in vectors])",
         "expect": 1,
     },
     {
-        "module": "statusOf",
-        "why": "card asset names decompiled as integers, which made "
-               "`val + 'CU'` raise TypeError instead of building 'pajamaManCU'",
-        "pattern": re.compile(r"\bself\.randomCardList = \[1, 2, 3,.*?24\]", re.S),
-        "replacement": "self.randomCardList = " + _as_list(CARD_NAMES),
+        "module": "python_shared/utility/utility",
+        "why": "AddVectors lost `vector.y` from its comprehension",
+        "pattern": re.compile(r"ySum = reduce\(\(lambda x, y: x \+ y\), "
+                              r"\[_\[1\] for vector in vectors\]\)"),
+        "replacement": "ySum = reduce((lambda x, y: x + y), "
+                       "[vector.y for vector in vectors])",
+        "expect": 1,
+    },
+    {
+        "module": "python_shared/utility/utility",
+        "why": "AddVectors lost `vector.z` from its comprehension",
+        "pattern": re.compile(r"zSum = reduce\(\(lambda x, y: x \+ y\), "
+                              r"\[_\[1\] for vector in vectors\]\)"),
+        "replacement": "zSum = reduce((lambda x, y: x + y), "
+                       "[vector.z for vector in vectors])",
+        "expect": 1,
+    },
+    # utility.unzip -- LOAD_GLOBAL None, BUILD_LIST 1, LOAD_FAST mlen,
+    # BINARY_MULTIPLY  ->  [None] * mlen
+    {
+        "module": "python_shared/utility/utility",
+        "why": "unzip lost `[None] * mlen` from its comprehension",
+        "pattern": re.compile(r"newlist = \[_\[1\] for i in range\(tupleSize\)\]"),
+        "replacement": "newlist = [[None] * mlen for i in range(tupleSize)]",
+        "expect": 1,
+    },
+    # xml_loader_classes.CClickpointTag.Build -- LOAD_FAST x, LOAD_ATTR sound
+    {
+        "module": "python_shared/adventure/xml_loader_classes",
+        "why": "clickpoint Build lost `x.sound` from its comprehension",
+        "pattern": re.compile(r"soundsList = \[_\[1\] for x in self\.soundTags\]"),
+        "replacement": "soundsList = [x.sound for x in self.soundTags]",
+        "expect": 1,
+    },
+    # getopt.long_has_args -- LOAD_FAST o
+    {
+        "module": "getopt",
+        "why": "long_has_args lost `o` from its comprehension",
+        "pattern": re.compile(r"possibilities = \[_\[1\] for o in longopts "
+                              r"if o\.startswith\(opt\)\]"),
+        "replacement": "possibilities = [o for o in longopts "
+                       "if o.startswith(opt)]",
+        "expect": 1,
+    },
+    # os._get_exports_list -- LOAD_FAST n
+    {
+        "module": "os",
+        "why": "_get_exports_list lost `n` from its comprehension",
+        "pattern": re.compile(r"return \[_\[1\] for n in dir\(module\) "
+                              r"if n\[0\] != '_'\]"),
+        "replacement": "return [n for n in dir(module) if n[0] != '_']",
         "expect": 1,
     },
 ]
