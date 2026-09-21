@@ -178,6 +178,25 @@ class Stub(object):
     def __setattr__(self, name, value):
         full = "%s.%s" % (object.__getattribute__(self, "_yaga_name"), name)
         LOG.record("set", full, "= %s" % _brief(value))
+        # A property with a setter, defined by a subclass, gets the value.
+        # The game subclasses our sprites and adds its own -- CImageSprite
+        # defines `position` as a property -- and without this the setter
+        # never ran: the value went into our store and the getter kept
+        # returning the old one, so the save photo stayed pinned to the
+        # corner however the cursor moved.
+        for klass in type(self).__mro__:
+            attr = klass.__dict__.get(name)
+            if attr is None:
+                continue
+            if isinstance(attr, property):
+                if attr.fset is not None:
+                    attr.fset(self, value)
+                    return
+                break
+            if hasattr(attr, "__set__"):
+                attr.__set__(self, value)
+                return
+            break
         object.__getattribute__(self, "_yaga_attrs")[name] = value
 
     def __call__(self, *a, **kw):

@@ -101,6 +101,11 @@ Opens a 640x480 window and boots the game the way it boots itself: Atari logo,
 Humongous logo, then the first room. Close the window to quit. Escape is the
 game's: it opens the options menu, as it did in the original.
 
+**Saving and loading** work as in the original: Escape, then Save, and the
+game photographs the room onto your cursor -- drop it in a slot, type a name,
+press Enter. Load shows the photos back. Saves go to `player/rundir/SaveGames`
+(`.dat` for the game, `.img` for the thumbnail), not into the install.
+
 | key | does |
 |---|---|
 | Escape | the options menu (not on the map, the logos, the TV room or a few minigames) |

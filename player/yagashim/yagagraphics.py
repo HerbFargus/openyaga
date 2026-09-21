@@ -26,6 +26,7 @@ import sys
 import pygame
 
 import _stub
+import images
 
 _mod = _stub.StubModule(__name__)
 
@@ -51,7 +52,27 @@ _surface = None          # the pygame display, once opened
 
 
 def target_surface():
-    """Where sprites draw.  None until the game creates a render target."""
+    """Where sprites draw.  None until the game creates a render target.
+
+    Normally the window.  But to photograph the room for a save, the game
+    points the camera at an off-screen image and renders everything again:
+
+        globals.g_Camera.target = scTarget          # a CImageBufferTarget
+        scTarget.RenderBegin(0)
+        globals.g_SpriteManager.Render(globals.g_Camera)
+
+    and sprites here draw wherever this says, so while the camera is on an
+    image target this hands back that image -- otherwise the photo came out
+    blank.
+    """
+    game = sys.modules.get("globals")
+    camera = getattr(game, "g_Camera", None) if game is not None else None
+    target = getattr(camera, "target", None) if camera is not None else None
+    if target is not None and not isinstance(target, RenderTarget):
+        buffer = getattr(target, "imageBuffer", None)
+        if isinstance(buffer, images.Image) and buffer.surface is not None:
+            buffer.drawn()
+            return buffer.surface
     return _surface
 
 
@@ -97,7 +118,9 @@ class RenderTarget(_stub.Stub):
             pygame.display.flip()
 
     def RenderImage(self, img, opacity=1.0, rcDst=None, rcSrc=None):
-        pass
+        """Draw an image: how screen_capture.CImageSprite renders, and so how
+        the room photo on the cursor and a save slot's picture get drawn."""
+        images.draw(target_surface(), img, opacity, rcDst, rcSrc)
 
     def SetCursor(self, *a, **kw):
         pass
@@ -203,6 +226,10 @@ class _System(_stub.Stub):
         self.primaryVideoDev = device
         self.videoDevices = [device]
 
+    def CreateImage(self, width=0, height=0, format=None, *a, **kw):
+        """A blank image: the room photo, a save thumbnail, a slot frame."""
+        return images.Image(width=width, height=height)
+
     def __nonzero__(self):
         return True
 
@@ -226,22 +253,9 @@ class IRenderTarget(object):
         _stub.LOG.record("new", "yagagraphics.IRenderTarget", "(subclassed)")
 
 
-class IImage(_stub.Stub):
-    """A single bitmap.  font_loader builds these from a layer's surface;
-    other callers pass a resource."""
-
-    def __init__(self, source=None):
-        _stub.Stub.__init__(self, "yagagraphics.IImage")
-        surface = source
-        if surface is not None and not hasattr(surface, "get_size"):
-            anim = getattr(source, "anim", None)
-            layers = anim.frames[0].layers if (anim and anim.frames) else []
-            surface = layers[0].image if layers else None
-        self.surface = surface
-        self.width, self.height = surface.get_size() if surface is not None else (0, 0)
-
-    def __nonzero__(self):
-        return True
+# The engine's image type.  See images.py: a surface to draw with and a byte
+# buffer the save code reads and writes, kept in step.
+IImage = images.Image
 
 
 class IImageAnim(_stub.Stub):
@@ -286,6 +300,49 @@ _mod.IRenderTarget = IRenderTarget
 _mod.IImage = IImage
 _mod.IImageAnim = IImageAnim
 import yagascene as _scene
+class _Names(type):
+    """Names the game asks for that nothing here listed still resolve, to a
+    number of their own, rather than to a stub that breaks comparisons."""
+
+    def __getattr__(cls, name):
+        if name.startswith("__"):
+            raise AttributeError(name)
+        value = 0x1000 + len(cls.__dict__)
+        setattr(cls, name, value)
+        return value
+
+
+class PixelFormat(object):
+    """Pixel formats.  Compared and used as dictionary keys --
+    utility.ScaleImage looks bytes-per-pixel up by format -- so they must be
+    stable values; as stubs they were whatever object the last access made.
+    The numbers are ours; only their distinctness matters."""
+    __metaclass__ = _Names
+    PXL_A8R8G8B8 = 1
+    PXL_X8R8G8B8 = 2
+    PXL_R8G8B8 = 3
+    PXL_R5G6B5 = 4
+    PXL_A1R5G5B5 = 5
+    PXL_X1R5G5B5 = 6
+    PXL_A8LUM8 = 7
+    PXL_A8PAL8 = 8
+    PXL_A8 = 9
+    PXL_APAL8 = 10
+    PXL_LUM8 = 11
+    PXL_PAL8 = 12
+
+
+images.PXL_A8R8G8B8 = PixelFormat.PXL_A8R8G8B8
+
+
+class Color(object):
+    def __init__(self, r=0, g=0, b=0, a=255):
+        self.r, self.g, self.b, self.a = r, g, b, a
+
+    def __repr__(self):
+        return "Color(%s, %s, %s, %s)" % (self.r, self.g, self.b, self.a)
+
+
 class ClearFlags(object):
     """What RenderBegin is asked to clear.  Only ever tested as a bit mask --
     screen_capture does `if clearFlags & ClearFlags.CLEAR_BACK` -- so it has
@@ -298,6 +355,8 @@ class ClearFlags(object):
 
 
 _mod.ClearFlags = ClearFlags
+_mod.PixelFormat = PixelFormat
+_mod.Color = Color
 _mod.Rect = _scene.Rect
 _mod.target_surface = target_surface
 _mod.shutdown = shutdown

@@ -161,6 +161,12 @@ class Font(object):
     def measure(self, text, kerning=0):
         return sum(self.advance(c, kerning) for c in text)
 
+    def GetStringRect(self, text="", *a, **kw):
+        """How big a string would be.  The save-name entry screen asks this
+        before accepting each character, to keep the name inside its box."""
+        import yagascene
+        return yagascene.Rect(0, 0, self.measure(str(text or "")), self.height)
+
     def __nonzero__(self):
         return bool(self.glyphs)
 
@@ -180,8 +186,9 @@ class IImageString(object):
         self.opacity = 1.0
         self.hJustify = HorizontalJustification.HJUSTIFY_LEFT
         self.vJustify = VerticalJustification.VJUSTIFY_TOP
-        self.constrainedWidth = 640
-        self.constrainedHeight = 480
+        # 0 means unconstrained: no wrapping.  The subtitles set 620.
+        self.constrainedWidth = 0
+        self.constrainedHeight = 0
         self.kerningAdjust = 0
         self.text = ""
         self._lines = None
@@ -192,6 +199,9 @@ class IImageString(object):
         return _stub.Stub("yagafont.IImageString.%s" % name)
 
     def __setattr__(self, name, value):
+        if name == "position":
+            import yagascene
+            value = yagascene.copy_point(value)
         object.__setattr__(self, name, value)
         # Any of these changes the layout, so throw it away and do it again
         # on the next draw rather than trying to patch it.
@@ -217,7 +227,7 @@ class IImageString(object):
         font = self.font
         if not isinstance(font, Font) or not font.glyphs:
             return []
-        limit = int(self.constrainedWidth or 640)
+        limit = int(self.constrainedWidth or 0) or 1 << 30
         kerning = int(self.kerningAdjust or 0)
         lines = []
         for paragraph in self.text.replace("\r\n", "\n").split("\n"):
@@ -253,11 +263,17 @@ class IImageString(object):
         except (TypeError, ValueError):
             left, top = 0, 0
 
+        # position is an anchor, not the corner of a box: left and top
+        # text starts at it, centred text is centred on it, right and bottom
+        # text ends at it.  The save screen passes the middle of a speech
+        # bubble with centre justification, and enter_text puts its typing
+        # cursor at `pos.x + (width + 1) / 2` -- the right-hand end of text
+        # centred on pos.x.
         block = line_height * len(lines)
         if self.vJustify == VerticalJustification.VJUSTIFY_CENTER:
-            top += (int(self.constrainedHeight or 0) - block) // 2
+            top -= block // 2
         elif self.vJustify == VerticalJustification.VJUSTIFY_BOTTOM:
-            top += int(self.constrainedHeight or 0) - block
+            top -= block
 
         try:
             opacity = max(0.0, min(1.0, float(self.opacity)))
@@ -268,9 +284,9 @@ class IImageString(object):
             width = font.measure(line, kerning)
             x = left
             if self.hJustify == HorizontalJustification.HJUSTIFY_CENTER:
-                x += (int(self.constrainedWidth or 0) - width) // 2
+                x -= width // 2
             elif self.hJustify == HorizontalJustification.HJUSTIFY_RIGHT:
-                x += int(self.constrainedWidth or 0) - width
+                x -= width
             y = top + row * line_height
             for char in line:
                 if char == " ":

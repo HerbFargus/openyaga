@@ -86,6 +86,25 @@ class Rect(object):
         return "Rect(%s, %s, %sx%s)" % (self.x, self.y, self.width, self.height)
 
 
+def copy_point(value):
+    """A Point is a value in the engine: assigning one copies it.
+
+    enter_text relies on that.  It hands the name's Point to the typing
+    cursor and then moves the cursor by editing the Point it reads back:
+
+        self.__textCursor.position = pos          # pos is the text's Point
+        ...
+        pos = self.__textCursor.position
+        pos.x = textStringPos.x + (textStringWidth + 1) / 2
+
+    With one shared object the name slid right by half its width on every
+    keystroke.  Anything without x and y is passed through untouched.
+    """
+    if isinstance(value, Point):
+        return Point(value.x, value.y, value.z)
+    return value
+
+
 class PointCollider(object):
     """Created by the scene for hit tests: spriteScene.CreatePointCollider."""
 
@@ -130,6 +149,7 @@ def SceneManagerFactory():
 _mod.SceneEvents = SceneEvents
 _mod.ISceneEventSink = ISceneEventSink
 _mod.Point = Point
+_mod.copy_point = copy_point
 _mod.Rect = Rect
 _mod.PointCollider = PointCollider
 _mod.Scene = Scene

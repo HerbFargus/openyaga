@@ -39,6 +39,13 @@ def _surface_for(layer):
     convert_alpha() takes its own copy and matches the display format, which
     also makes the blit fast.
     """
+    replacement = getattr(layer, "_replacement", None)
+    if replacement is not None:
+        # The game has put its own picture in this layer -- a photo in a
+        # save slot.  Draw that, fresh each time: it may be drawn on again.
+        drawn = getattr(replacement, "surface", replacement)
+        if drawn is not None:
+            return drawn
     key = id(layer)
     surface = _surfaces.get(key)
     if surface is None:
@@ -375,6 +382,9 @@ class ISprite(_stub.Stub):
         clickpoint and never drew a frame or played a sound.  Rooms looked
         alive (clicks registered, objects were found) and did nothing.
         """
+        if name == "position":
+            import yagascene
+            value = yagascene.copy_point(value)
         _stub.Stub.__setattr__(self, name, value)
         if name == "anim":
             frames = getattr(value, "frames", None)
@@ -384,6 +394,48 @@ class ISprite(_stub.Stub):
                 count = 0
             _stub.Stub.__setattr__(self, "frameCount", count)
             _stub.Stub.__setattr__(self, "currentFrame", 0)
+        if name in ("anim", "position"):
+            self._estimate_rect()
+
+    def _estimate_rect(self):
+        """Work out renderRect from the picture and position, before drawing.
+
+        Render measures it exactly each frame, but the game asks sooner than
+        that.  The save screen centres each slot's label on its speech bubble
+        the moment the bubble is made:
+
+            centerX = textSprite.renderRect.x + textSprite.renderRect.width / 2
+
+        and with nothing drawn yet that was the middle of an empty rectangle
+        at the origin, so every label went to the top-left corner.
+        """
+        anim = self.__dict__.get("_yaga_attrs", {}).get("anim")
+        frames = getattr(anim, "frames", None)
+        if not frames:
+            return
+        try:
+            frame = frames[min(int(self.currentFrame or 0), len(frames) - 1)]
+            ox, oy = int(self.position.x or 0), int(self.position.y or 0)
+        except (TypeError, ValueError, AttributeError):
+            return
+        boxes = []
+        for layer in frame.layers:
+            if layer.rgba is None or not layer.w or not layer.h:
+                continue
+            if layer.mask and not (layer.mask & PHONEME_REST):
+                continue
+            if (layer.name or "").upper().startswith("BLINK"):
+                continue
+            boxes.append((ox + layer.x, oy + layer.y,
+                          ox + layer.x + layer.w, oy + layer.y + layer.h))
+        if boxes:
+            import yagascene
+            x1 = min(b[0] for b in boxes)
+            y1 = min(b[1] for b in boxes)
+            x2 = max(b[2] for b in boxes)
+            y2 = max(b[3] for b in boxes)
+            _stub.Stub.__setattr__(self, "renderRect",
+                                   yagascene.Rect(x1, y1, x2 - x1, y2 - y1))
 
     def AddChild(self, child=None, *a, **kw):
         """Children are how the engine attaches a talkie's event stream.

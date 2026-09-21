@@ -41,10 +41,11 @@ class Layer(object):
     `anim.frames[0].layers[0].image` and hands it to yagagraphics.IImage.
     """
 
-    __slots__ = ("name", "x", "y", "w", "h", "mask", "rgba", "note", "_surface")
+    __slots__ = ("name", "x", "y", "w", "h", "mask", "rgba", "note",
+                 "_surface", "_replacement")
 
-    @property
-    def image(self):
+    def surface(self):
+        """The decoded pixels as a pygame Surface, made once."""
         if self._surface is None and self.rgba is not None and self.w and self.h:
             import pygame
             surface = pygame.image.frombuffer(
@@ -56,8 +57,32 @@ class Layer(object):
             self._surface = surface
         return self._surface
 
+    def _get_image(self):
+        """The layer's picture as an engine image, with .width and .height.
+
+        The game reads it -- font_loader, and the save slot, which measures
+        `layers[0].image.width` to size its frame -- and it can also replace
+        it: dropping a photo on a save slot does
+
+            self.GetSprite().anim.frames[0].layers[0].image = newImage
+
+        and the slot then shows the photo.  A replacement stays until
+        replaced again, and the renderer draws it in place of the decoded
+        pixels.
+        """
+        if self._replacement is not None:
+            return self._replacement
+        import images
+        return images.Image(self.surface())
+
+    def _set_image(self, value):
+        self._replacement = value
+
+    image = property(_get_image, _set_image)
+
     def __init__(self, name="", x=0, y=0, w=0, h=0, mask=0, rgba=None, note=""):
         self._surface = None
+        self._replacement = None
         self.name = name
         self.x, self.y, self.w, self.h = x, y, w, h
         self.mask = mask
