@@ -48,7 +48,8 @@ characters, takes mouse input, plays music, dialogue and sound effects, walks
 between rooms, and opens the inventory. Clickpoints animate and speak, and
 cutscenes hand control back when they end.
 
-Not yet: Bink video (the movies are skipped), subtitles, and the `.evb`/`.evt`
+Not yet: Bink video (the movies are skipped -- though ffmpeg decodes these
+`BIKi` files fine, so this is reachable), subtitles, and the `.evb`/`.evt`
 lipsync streams. Expect rough edges — this has been driven through one game's
 opening, not played to the end.
 
@@ -67,6 +68,7 @@ there. `.gitignore` denies by default for exactly this reason.
 | `tools/` | Python 3, Pillow |
 | `player/` setup | Python 3, `uncompyle6` (one-time, per install) |
 | `player/` runtime | Python 2.7 + `pygame==1.9.6` — the game's code is Python 2, and converting it would silently change integer division |
+| `player/` dialogue | ffmpeg, to decode the MP3 voice tracks so they mix with the music instead of cutting it |
 
 ## Prior work
 

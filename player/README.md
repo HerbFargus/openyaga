@@ -100,6 +100,18 @@ C:\Python27\python.exe run_game.py
 Opens a 640x480 window and boots the game the way it boots itself: Atari logo,
 Humongous logo, then the first room. Escape or closing the window quits.
 
+**Dialogue needs ffmpeg.** SDL_mixer 1.2 decodes MP3 only on its single music
+channel, and this game's 1,389 lines of dialogue are MP3 -- as is the score.
+Left to collide, a line kills the music, the music manager restarts the score
+on the next tick, and the line dies in the frame it began. So dialogue is
+decoded to PCM and mixed as an ordinary sound, which is what the original
+engine did. ffmpeg is looked for in `OPENYAGA_FFMPEG`, then on `PATH`, then as
+`player/ffmpeg.exe`, then in the usual install directories. Without it the
+player still runs, with the old behaviour: lines cut the music and each other.
+
+Decoded lines are cached under `player/cache/audio`, about 115 KB each, so a
+line costs ~57 ms the first time it is spoken and nothing after that.
+
 **Movies are a black screen.** Bink is not decoded, so a movie occupies its
 real running time with nothing drawn -- and the intro is 172 seconds, during
 which the game is waiting and nothing responds. Click or press a key to cut one

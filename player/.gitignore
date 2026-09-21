@@ -17,3 +17,4 @@ player/rundir/
 # The game writes its saves and its log here when the player runs.
 rundir/
 cursor_enabled.log
+cache/

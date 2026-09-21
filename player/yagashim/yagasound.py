@@ -16,10 +16,16 @@ SDL_mixer:
 * **WAV** -- loaded as a Mix chunk, so any number can play at once.  This is
   every sound effect and clickpoint noise.
 * **MP3** -- SDL_mixer only decodes MP3 on the *music* channel, of which
-  there is exactly one.  Dialogue and music are both MP3, so the last one
-  started wins.  The original engine used Miles Sound System and had no such
-  limit; this is the first place the player is meaningfully less capable than
-  the real thing.
+  there is exactly one, and both dialogue and score are MP3.  Left at that the
+  last sound started wins, so a line of dialogue cuts the music, the music
+  manager restarts the score on the next tick, and the line dies in the frame
+  it began.
+
+  So only the score streams from that channel.  Dialogue is decoded to PCM
+  (see mp3.py) and played as an ordinary chunk, which is what the original
+  engine did -- the game mixes music underneath everything else at its own
+  volume, defaulted to 0.3.  Without a decoder available the old behaviour is
+  the fallback.
 
 ISound is a plain object rather than a Stub subclass: `volume` has to be a
 real property so setting it reaches the mixer, and Stub's __setattr__ would
@@ -34,6 +40,7 @@ import time
 import pygame
 
 import _stub
+import mp3
 
 try:
     import cStringIO as _io
@@ -52,6 +59,10 @@ def _ensure_mixer():
     if _mixer_ready is None:
         try:
             pygame.mixer.init()
+            # Eight is the default and the game will exceed it: dialogue,
+            # a clickpoint, ambient noise and a room's own effects overlap
+            # routinely now that dialogue is a chunk rather than the music.
+            pygame.mixer.set_num_channels(32)
             _mixer_ready = True
         except pygame.error, exc:
             _stub.LOG.record("call", "yagasound.mixer", "unavailable: %s" % exc)
@@ -76,7 +87,12 @@ class ISound(object):
         object.__setattr__(self, "_ready", False)
         self.resource = res
         self.path = str(getattr(res, "path", "") or "")
-        self.is_music = self.path.lower().endswith(".mp3")
+        # Only the score belongs on the one streaming channel.  Everything
+        # else that happens to be MP3 -- all 1,389 lines of dialogue -- is
+        # decoded and mixed like any other sound.
+        normalised = self.path.lower().replace("\\", "/").lstrip("/")
+        self.is_music = normalised.split("/")[0] == "music"
+        self.is_mp3 = normalised.endswith(".mp3")
         self.chunk = None
         self.channel = None
         self._started = None
@@ -86,12 +102,26 @@ class ISound(object):
         data = getattr(res, "data", None)
         if data is None or not _ensure_mixer():
             return
-        if not self.is_music:
-            try:
+        if self.is_music:
+            return
+        source = None
+        if self.is_mp3:
+            init = pygame.mixer.get_init()
+            source = mp3.decode(self.path, data,
+                                (init[0], init[2]) if init else None)
+            if source is None:
+                # No decoder.  Fall back to the streaming channel, which is
+                # the old behaviour: audible, but it will cut the music.
+                self.is_music = True
+                return
+        try:
+            if source:
+                self.chunk = pygame.mixer.Sound(source)
+            else:
                 self.chunk = pygame.mixer.Sound(_io.StringIO(bytes(data)))
-            except Exception, exc:
-                _stub.LOG.record("call", "yagasound.ISound",
-                                 "(%s) could not load: %s" % (self.path, exc))
+        except Exception, exc:
+            _stub.LOG.record("call", "yagasound.ISound",
+                             "(%s) could not load: %s" % (self.path, exc))
 
     # volume has to reach the mixer as soon as it is set
     def __setattr__(self, name, value):
