@@ -17,6 +17,7 @@ Nothing draws yet: Render() records the call so the render order shows up in
 the trace.
 """
 
+import struct
 import sys
 import time
 
@@ -50,6 +51,82 @@ def _surface_for(layer):
     return surface
 
 _mod = _stub.StubModule(__name__)
+
+
+class IVideoElement(object):
+    """A Bink movie -- the .da2 files, which are BIK video.
+
+    Decoding Bink is out of reach here, but the header is simple and tells us
+    frame count and frame rate, so a movie occupies exactly as long as it
+    really runs and the game advances on its own schedule:
+
+        offset 0   "BIK" + version byte
+               8   frame count
+              20   width, height
+              28   fps dividend, divider
+
+    scene_helogo watches CBinkSprite.IsFinished(), which is
+    `binkVideo.isPlaying == false`, to move from the Atari logo to the
+    Humongous one and then into the game.  Nothing is drawn: a black screen
+    for the right duration is honest, where a frozen frame would not be.
+    """
+
+    def __init__(self, res=None):
+        self.resource = res
+        self.path = str(getattr(res, "path", "") or "")
+        self.volume = 1.0
+        self.width = self.height = 0
+        self.frames = 0
+        self.fps = 15.0
+        self._started = None
+        self._playing = False
+
+        data = getattr(res, "data", None)
+        if data and len(data) >= 40 and bytes(data[:3]) == "BIK":
+            (self.frames,) = struct.unpack_from("<I", bytes(data), 8)
+            self.width, self.height = struct.unpack_from("<II", bytes(data), 20)
+            dividend, divider = struct.unpack_from("<II", bytes(data), 28)
+            if divider:
+                self.fps = float(dividend) / divider
+        self.duration = (self.frames / self.fps) if self.fps else 0.0
+        _stub.LOG.record("new", "yagasprite.IVideoElement",
+                         "(%s) %dx%d, %d frames at %.1f fps = %.1fs"
+                         % (self.path, self.width, self.height,
+                            self.frames, self.fps, self.duration))
+
+    def __getattr__(self, name):
+        if name.startswith("__"):
+            raise AttributeError(name)
+        return _stub.Stub("yagasprite.IVideoElement.%s" % name)
+
+    @property
+    def isPlaying(self):
+        if not self._playing:
+            return False
+        if self._started is None:
+            return True
+        if time.time() - self._started >= self.duration:
+            object.__setattr__(self, "_playing", False)
+            return False
+        return True
+
+    def Run(self, scene=None, *a, **kw):
+        self._playing = True
+        self._started = time.time()
+        _stub.LOG.record("call", "yagasprite.IVideoElement.Run",
+                         "(%s for %.1fs)" % (self.path, self.duration))
+
+    def Stop(self, scene=None, *a, **kw):
+        self._playing = False
+
+    def Render(self, camera=None, *a, **kw):
+        pass
+
+    def __nonzero__(self):
+        return True
+
+    def __repr__(self):
+        return "<IVideoElement %s>" % self.path
 
 
 class SoundList(object):
@@ -279,6 +356,7 @@ class TalkieSprite(ISprite):
 _mod.ISprite = ISprite
 _mod.TalkieList = TalkieList
 _mod.SoundList = SoundList
+_mod.IVideoElement = IVideoElement
 _mod.Sprite = Sprite
 _mod.TalkieSprite = TalkieSprite
 

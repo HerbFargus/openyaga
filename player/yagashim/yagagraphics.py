@@ -202,6 +202,8 @@ _mod.RenderTarget = RenderTarget
 _mod.GraphicsSystem = GraphicsSystem
 _mod.IRenderTarget = IRenderTarget
 _mod.IImageAnim = IImageAnim
+import yagascene as _scene
+_mod.Rect = _scene.Rect
 _mod.target_surface = target_surface
 _mod.shutdown = shutdown
 
