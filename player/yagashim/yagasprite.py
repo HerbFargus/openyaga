@@ -50,6 +50,25 @@ def _surface_for(layer):
         _surfaces[key] = surface
     return surface
 
+_live = []          # every sprite made, so playback does not depend on drawing
+
+
+def tick_all():
+    """Advance every playing sprite, once per frame.
+
+    Animation cannot be driven from Render(): a sprite that is off screen, or
+    simply not in the render list, still has to finish -- and a character's
+    exit animation finishing is what triggers the room change.
+    """
+    for sprite in list(_live):
+        try:
+            inner = getattr(sprite.anim, "anim", None)
+            if inner is not None and inner.frames:
+                sprite._advance(len(inner.frames))
+        except Exception:
+            continue
+
+
 _mod = _stub.StubModule(__name__)
 
 
@@ -222,9 +241,36 @@ class ISprite(_stub.Stub):
         self._started = None
         self._anim_id = None
         self._drawn = []          # (layer, screen x, screen y) from the last frame
+        object.__setattr__(self, "_sinks", [])
+        _live.append(self)
         # Not a list: the game sets attributes on it, e.g.
         # `sprite.talkies.continuous = true`.
         self.talkies = TalkieList("%s.talkies" % name)
+
+    def RegisterEventSink(self, sink, *a, **kw):
+        sinks = object.__getattribute__(self, "_sinks")
+        if sink is not None and sink not in sinks:
+            sinks.append(sink)
+
+    def UnregisterEventSink(self, sink=None, *a, **kw):
+        sinks = object.__getattribute__(self, "_sinks")
+        if sink in sinks:
+            sinks.remove(sink)
+
+    def _fire(self, eventType):
+        """Tell anything watching that the animation started or ended.
+
+        This is what drives room changes: a character's exit animation
+        finishes, the sink fires SCENE_STOP, and the character queues the
+        next scene.
+        """
+        import yagascene
+        for sink in list(object.__getattribute__(self, "_sinks")):
+            try:
+                sink.Event(eventType, self)
+            except Exception, exc:
+                _stub.LOG.record("call", "yagasprite.sink",
+                                 "-> %s: %s" % (type(exc).__name__, exc))
 
     def Run(self, scene=None, *a, **kw):
         """Start playing.  Sprites do not animate until asked.
@@ -241,6 +287,8 @@ class ISprite(_stub.Stub):
             self._started = time.time()
             _stub.LOG.record("call", "%s.Run" % self._yaga_name,
                              "(%s)" % _stub._brief(scene))
+            import yagascene
+            self._fire(yagascene.SceneEvents.SCENE_RUN)
 
     def Stop(self, *a, **kw):
         self._playing = False
@@ -253,7 +301,10 @@ class ISprite(_stub.Stub):
         animation carries its own rate, so timing off the clock keeps playback
         at the intended speed either way.
         """
-        if not self._playing or frame_count < 2:
+        # A single-frame animation still *finishes*: characters spend most of
+        # their time on a one-frame root pose with loopCount 1, and the scene
+        # change waits on that completion.
+        if not self._playing or frame_count < 1:
             return
         # A new animation on the same sprite starts from its first frame.
         if self._anim_id != id(self.anim):
@@ -267,8 +318,12 @@ class ISprite(_stub.Stub):
             if step >= limit:
                 self._playing = False
                 self.currentFrame = frame_count - 1
+                import yagascene
+                _stub.LOG.record("call", "%s.finished" % self._yaga_name,
+                                 "(%s)" % getattr(self.anim, "locator", "?"))
+                self._fire(yagascene.SceneEvents.SCENE_STOP)
                 return
-        self.currentFrame = step % frame_count
+        self.currentFrame = step % frame_count if frame_count else 0
 
     def SetLayerFlag(self, *a, **kw):
         _stub.LOG.record("call", "%s.SetLayerFlag" % self._yaga_name, _stub._args(a, kw))
@@ -356,6 +411,7 @@ class TalkieSprite(ISprite):
 _mod.ISprite = ISprite
 _mod.TalkieList = TalkieList
 _mod.SoundList = SoundList
+_mod.tick_all = tick_all
 _mod.IVideoElement = IVideoElement
 _mod.Sprite = Sprite
 _mod.TalkieSprite = TalkieSprite

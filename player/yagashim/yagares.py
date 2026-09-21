@@ -53,6 +53,12 @@ class Resource(object):
                                  "(%r) -> %s" % (self.path, exc))
         return self._anim
 
+    @property
+    def isLoaded(self):
+        # Loading is synchronous here, so anything that exists is ready.
+        # pj_preload_manager polls this every tick while it warms a room.
+        return True
+
     def __nonzero__(self):
         return True
 

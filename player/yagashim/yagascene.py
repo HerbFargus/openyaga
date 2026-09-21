@@ -39,6 +39,42 @@ class Point(object):
         return "Point(%s, %s, %s)" % (self.x, self.y, self.z)
 
 
+class _ConstMeta(type):
+    """Named constants, invented on demand and cached so `==` stays stable."""
+
+    def __getattr__(cls, name):
+        if name.startswith("__"):
+            raise AttributeError(name)
+        value = "%s.%s" % (cls.__name__, name)
+        type.__setattr__(cls, name, value)
+        _stub.LOG.record("const", "yagascene.%s" % value)
+        return value
+
+
+class SceneEvents(object):
+    """What a sprite reports as it plays.  SCENE_STOP is load-bearing: a
+    character's exit animation ends, the sink fires, and samCharacter then
+    calls QueueNextScene -- which is how the game changes rooms."""
+
+    __metaclass__ = _ConstMeta
+    SCENE_RUN = "SceneEvents.SCENE_RUN"
+    SCENE_STOP = "SceneEvents.SCENE_STOP"
+
+
+class ISceneEventSink(_stub.Stub):
+    """Base class for the game's sprite callbacks; see character.CSpriteCallback,
+    whose Event(eventType, sprite) forwards to the character."""
+
+    def __init__(self):
+        _stub.Stub.__init__(self, "yagascene.ISceneEventSink()")
+
+    def Event(self, eventType, sprite):
+        pass
+
+    def __nonzero__(self):
+        return True
+
+
 class Rect(object):
     """What sprite.renderRect is: utility.OverSprite reads .x/.y/.width/.height."""
 
@@ -91,6 +127,8 @@ def SceneManagerFactory():
     return _manager
 
 
+_mod.SceneEvents = SceneEvents
+_mod.ISceneEventSink = ISceneEventSink
 _mod.Point = Point
 _mod.Rect = Rect
 _mod.PointCollider = PointCollider

@@ -264,6 +264,9 @@ class EventManager(_stub.Stub):
             self._inject_test_click()
             self._pump_input()
 
+            import yagasprite
+            yagasprite.tick_all()
+
             for timer in list(self._timers):
                 receiver = timer.eventReciever
                 if receiver is None:
