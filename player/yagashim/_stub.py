@@ -40,6 +40,7 @@ class TraceLog(object):
         d = os.path.dirname(path)
         if d and not os.path.isdir(d):
             os.makedirs(d)
+        self.path = path
         self.stream = open(path, "w")
 
     def record(self, kind, target, detail=""):
@@ -63,6 +64,59 @@ class TraceLog(object):
 
 
 LOG = TraceLog()
+
+# Set by report_crash; run_game reads it to say how the run ended.
+CRASH = None
+
+
+def report_crash(exc_info, where=""):
+    """Say loudly that the game has stopped on an exception.
+
+    The game catches its own loop exceptions and prints them -- to
+    sys.stderr, which boot.py has swapped for a redirector writing into the
+    game's log file.  Then it stops the loop.  From a chair that is a window
+    closing for no reason, so this puts the traceback on the real console,
+    in crash.log beside the trace, and in the trace itself.
+    """
+    global CRASH
+    import traceback
+    text = "".join(traceback.format_exception(*exc_info))
+    CRASH = text.strip().splitlines()[-1] if text.strip() else "unknown error"
+    LOG.record("call", "CRASH", "%s (caught in %s)" % (CRASH, where))
+    for line in text.splitlines():
+        LOG.record("call", "CRASH", line)
+    try:
+        if LOG.stream:
+            LOG.stream.flush()
+    except Exception:
+        pass
+
+    crash_path = None
+    trace_path = getattr(LOG, "path", None)
+    if trace_path:
+        crash_path = os.path.join(os.path.dirname(trace_path), "crash.log")
+        try:
+            f = open(crash_path, "w")
+            f.write("Caught in %s\n\n%s" % (where, text))
+            f.close()
+        except Exception:
+            crash_path = None
+
+    try:
+        err = sys.__stderr__
+        rule = "=" * 70
+        err.write("\n" + rule + "\n")
+        err.write("openyaga: the game stopped on an error\n\n")
+        err.write(text)
+        err.write("\n")
+        if crash_path:
+            err.write("Saved to %s\n" % crash_path)
+        if trace_path:
+            err.write("Engine trace: %s\n" % trace_path)
+        err.write(rule + "\n")
+        err.flush()
+    except Exception:
+        pass
 
 # Set by run_game.py before the game starts: headless checking options.
 FRAME_LIMIT = 0

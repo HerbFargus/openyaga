@@ -142,6 +142,24 @@ frame. *Without ffmpeg:* a movie is a black screen for its real running time.
 Either way a click or a key cuts a movie short, and `--skip-video` treats every
 movie as zero length, which takes you straight to the bedroom.
 
+**When something goes wrong.** The game catches its own errors and stops, and
+it prints the traceback into its log file rather than the console -- so a
+crash used to look like the window simply closing. It now says so on the
+console, with the traceback, and saves it to `player/crash.log`.
+
+Every run also keeps the previous two, so relaunching no longer destroys the
+evidence:
+
+| | |
+|---|---|
+| `player/trace.log` | every engine call this run, in order; `.1` and `.2` are the runs before |
+| `player/crash.log` | the traceback, if this run crashed; `.1` and `.2` likewise |
+| `player/rundir/*.log` | the game's own log, where its printed messages go |
+
+To report a problem, the useful things are the last fifty or so lines of
+`trace.log` from the run that went wrong, `crash.log` if there is one, and
+what you had just clicked.
+
 | | |
 |---|---|
 | move the mouse | the pointer changes over anything clickable, as it does in the original: an outline arrow normally, a filled one over a clickpoint, a direction arrow at an exit, an hourglass while the game is busy, and nothing at all during a cutscene |

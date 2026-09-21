@@ -13,6 +13,7 @@ Requires Python 2.7 -- the game's code is Python 2.
 import json
 import os
 import sys
+import time
 import traceback
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -268,6 +269,47 @@ def _exit_quietly():
     os._exit(0)
 
 
+def _move(source, target):
+    """Rename, riding out a transient lock; copy if the lock will not lift.
+
+    On Windows a freshly written log is often held for a moment by the
+    virus scanner or the search indexer -- a 30 MB trace after a long
+    session certainly is -- and a failed rename that fell back to
+    overwriting would lose exactly the run someone wanted to look at.
+    """
+    import shutil
+    for attempt in range(6):
+        try:
+            if os.path.exists(target):
+                os.remove(target)
+            os.rename(source, target)
+            return True
+        except OSError:
+            time.sleep(0.2)
+    try:
+        shutil.copyfile(source, target)
+        return True
+    except (IOError, OSError):
+        return False
+
+
+def rotate(path, keep=3):
+    """Move path to path.1, path.1 to path.2, and so on, keeping `keep`.
+
+    Every run used to overwrite trace.log, so relaunching to look at a
+    problem destroyed the only record of it.  Now the last few runs survive:
+    trace.log is this run, trace.log.1 the one before.
+    """
+    for n in range(keep - 1, 0, -1):
+        older, newer = "%s.%d" % (path, n), "%s.%d" % (path, n + 1)
+        if os.path.exists(older):
+            _move(older, newer)
+    if os.path.exists(path) and not _move(path, path + ".1"):
+        sys.stderr.write("openyaga: could not keep the previous %s -- it is "
+                         "locked and will be overwritten\n"
+                         % os.path.basename(path))
+
+
 _pending = {}
 
 
@@ -320,6 +362,12 @@ def main():
 
     import _stub
     log_path = os.path.join(HERE, "trace.log")
+    rotate(log_path)
+    rotate(os.path.join(HERE, "crash.log"))
+    # The game's own log, which is where its printed tracebacks land.
+    import glob
+    for game_log in glob.glob(os.path.join(HERE, "rundir", "*.log")):
+        rotate(game_log)
     _stub.LOG.open(log_path)
     _stub.LOG.note("=== %s ===" % manifest.get("title", "unknown game"))
 
@@ -403,6 +451,8 @@ def main():
         except Exception:
             pass
 
+    if _stub.CRASH:
+        outcome = "CRASHED -- %s (see crash.log)" % _stub.CRASH
     report(_stub.LOG, outcome, log_path)
     _exit_quietly()
 

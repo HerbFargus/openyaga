@@ -31,6 +31,7 @@ Timers are ticked in registration order, which puts game logic before drawing.
 them, and it is the sane one.)
 """
 
+import os
 import sys
 import time
 
@@ -355,6 +356,28 @@ class EventManager(_stub.Stub):
         # run: it still stops sounds once the loop returns.
 
     def StopEventLoop(self):
+        """End the loop -- and if that is the game giving up, say so.
+
+        main.py's tick handler ends like this:
+
+            except:
+                traceback.print_exc(None, sys.stderr)
+                globals.eventManager.StopEventLoop()
+
+        and sys.stderr is the game's log redirector by then, so a crash
+        looks exactly like quitting.  The test for "called from inside a
+        handler" is that the exception being handled was caught in the very
+        frame calling us.  sys.exc_info() alone is not enough: Python 2 keeps
+        an exception around until the frame that handled it returns, so an
+        error swallowed earlier in the loop would turn every later quit into
+        a false crash report.
+        """
+        info = sys.exc_info()
+        caller = sys._getframe(1)
+        if info[0] is not None and info[2] is not None                 and info[2].tb_frame is caller:
+            where = "%s:%d (%s)" % (os.path.basename(caller.f_code.co_filename),
+                                    caller.f_lineno, caller.f_code.co_name)
+            _stub.report_crash(info, where)
         self._running = False
 
     def __nonzero__(self):
