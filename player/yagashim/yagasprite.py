@@ -60,7 +60,10 @@ class ISprite(_stub.Stub):
         import yagascene
         self.position = yagascene.Point(0, 0, 0)
         self.anim = None
-        self.renderRect = None
+        # An empty rect rather than None: the room manager hit-tests every
+        # object each tick, including sprites that have not drawn yet, and
+        # utility.CursorOverSprite reads .x/.width straight off it.
+        self.renderRect = yagascene.Rect(0, 0, 0, 0)
         self.currentFrame = 0
         self.frameCount = 0
         self.loopCount = 0

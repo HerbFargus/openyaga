@@ -199,6 +199,7 @@ class EventManager(_stub.Stub):
         return self._sources[key]
 
     def _dispatch(self, event):
+        _stub.LOG.record('call', 'yagaevents.dispatch', '%r to %d receivers' % (event, len(self._receivers)))
         for receiver in list(self._receivers):
             try:
                 receiver.Raise(event)
