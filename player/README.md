@@ -106,6 +106,12 @@ game photographs the room onto your cursor -- drop it in a slot, type a name,
 press Enter. Load shows the photos back. Saves go to `player/rundir/SaveGames`
 (`.dat` for the game, `.img` for the thumbnail), not into the install.
 
+Saves are interchangeable with the original game, in both directions --
+confirmed by loading the original's saves here and these in the original.
+Copy the `.dat` and `.img` pair between the two `SaveGames` folders to carry
+a playthrough across; the original's is in its install folder, so copying
+into it needs administrator rights.
+
 | key | does |
 |---|---|
 | Escape | the options menu (not on the map, the logos, the TV room or a few minigames) |
