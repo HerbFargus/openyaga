@@ -23,6 +23,8 @@ identity-based. Real formats matter only once something actually renders.
 
 import sys
 
+import pygame
+
 import _stub
 
 _mod = _stub.StubModule(__name__)
@@ -45,17 +47,69 @@ class VideoMode(object):
         return "VideoMode(%s, %s, %s)" % (self.width, self.height, self.format)
 
 
+_surface = None          # the pygame display, once opened
+
+
+def target_surface():
+    """Where sprites draw.  None until the game creates a render target."""
+    return _surface
+
+
+def shutdown():
+    global _surface
+    if _surface is not None:
+        pygame.quit()
+        _surface = None
+
+
 class RenderTarget(_stub.Stub):
-    """Truthy, unlike a plain stub -- boot.py checks `if not g_RenderTarget`."""
+    """A real window.  Truthy, since boot.py checks `if not g_RenderTarget`.
+
+    The game drives this once per frame from CRenderCallback:
+        RenderBegin(0) -> sprites draw -> RenderEnd()
+    which maps onto clear and flip.
+    """
 
     def __init__(self, mode, buffers, targetType):
+        global _surface
         _stub.Stub.__init__(self, "yagagraphics.RenderTarget")
-        _stub.LOG.record("new", "yagagraphics.RenderTarget",
-                         "(%r, buffers=%s)" % (mode, _stub._brief(buffers)))
         self.mode = mode
         self.width = getattr(mode, "width", SCREEN_WIDTH)
         self.height = getattr(mode, "height", SCREEN_HEIGHT)
         self.targetType = targetType
+
+        pygame.init()
+        _surface = pygame.display.set_mode((self.width, self.height))
+        pygame.display.set_caption("openyaga")
+        _stub.LOG.record("new", "yagagraphics.RenderTarget",
+                         "(%dx%d window opened)" % (self.width, self.height))
+
+    # -- the per-frame cycle ----------------------------------------------
+    def RenderBegin(self, clearFlags=0):
+        if _surface is not None:
+            _surface.fill((0, 0, 0))
+
+    def RenderEnd(self):
+        if _surface is not None:
+            pygame.display.flip()
+
+    def RenderImage(self, img, opacity=1.0, rcDst=None, rcSrc=None):
+        pass
+
+    def SetCursor(self, *a, **kw):
+        pass
+
+    def LoadCursorFile(self, *a, **kw):
+        return 0
+
+    def SetCursorByID(self, *a, **kw):
+        pass
+
+    def screenshot(self, path):
+        if _surface is not None:
+            pygame.image.save(_surface, path)
+            return True
+        return False
 
     def __nonzero__(self):
         return True
@@ -148,6 +202,8 @@ _mod.RenderTarget = RenderTarget
 _mod.GraphicsSystem = GraphicsSystem
 _mod.IRenderTarget = IRenderTarget
 _mod.IImageAnim = IImageAnim
+_mod.target_surface = target_surface
+_mod.shutdown = shutdown
 
 # Replacing ourselves in sys.modules drops the real module's last reference.
 # Python 2 then tears it down and sets every global to None -- so the functions

@@ -20,7 +20,18 @@ SHIMS = os.path.join(HERE, "yagashim")
 CACHE = os.path.join(HERE, "gamecache")
 
 
+_pending = {}
+
+
 def main():
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--frames", type=int, default=0,
+                    help="stop after this many rendered frames")
+    ap.add_argument("--screenshot", help="save the last frame here")
+    ap.add_argument("--scene", help="start in this scene instead of the logo")
+    args = ap.parse_args()
+
     if sys.version_info[0] != 2:
         sys.exit("run_game.py needs Python 2.7 (found %d.%d).  Try:\n"
                  "    C:\\Python27\\python.exe run_game.py"
@@ -50,10 +61,26 @@ def main():
     n = resources.init(manifest["data_dirs"])
     _stub.LOG.note("indexed %d archives" % n)
 
+    # Resolve output paths before the chdir below, so nothing lands in the
+    # player's game folder.
+    _stub.FRAME_LIMIT = args.frames
+    _stub.SCREENSHOT = os.path.abspath(args.screenshot) if args.screenshot else None
+
     # The game resolves data paths relative to the executable's folder.
     exe_dir = os.path.dirname(manifest["executable"])
     if os.path.isdir(exe_dir):
         os.chdir(exe_dir)
+
+    if args.scene:
+        # globals.py needs the true/false builtins boot.py installs; set them
+        # early so it can be imported before boot runs.  boot.py sets them
+        # again, harmlessly.
+        import __builtin__
+        __builtin__.False, __builtin__.True = 0, 1
+        __builtin__.false, __builtin__.true = 0, 1
+        import globals as game_globals
+        print "starting in scene %r instead of %r" % (args.scene, game_globals.INITIAL_SCENE)
+        game_globals.INITIAL_SCENE = args.scene
 
     real_stdout, real_stderr = sys.stdout, sys.stderr
     sys.argv = ["boot.py"]

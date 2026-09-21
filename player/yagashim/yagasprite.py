@@ -19,7 +19,34 @@ the trace.
 
 import sys
 
+import pygame
+
 import _stub
+
+# Only the rest pose is drawn; see Render() below.
+PHONEME_REST = 0x1
+
+_surfaces = {}
+
+
+def _surface_for(layer):
+    """Cache a pygame Surface per decoded layer.
+
+    frombuffer does not copy, so the RGBA bytes must outlive the Surface --
+    convert_alpha() takes its own copy and matches the display format, which
+    also makes the blit fast.
+    """
+    key = id(layer)
+    surface = _surfaces.get(key)
+    if surface is None:
+        raw = bytes(bytearray(layer.rgba))
+        surface = pygame.image.frombuffer(raw, (layer.w, layer.h), "RGBA")
+        try:
+            surface = surface.convert_alpha()
+        except pygame.error:
+            surface = surface.copy()
+        _surfaces[key] = surface
+    return surface
 
 _mod = _stub.StubModule(__name__)
 
@@ -59,10 +86,36 @@ class ISprite(_stub.Stub):
         return 0
 
     def Render(self, camera=None):
+        """Blit the current frame's layers onto the render target.
+
+        Layer coordinates are absolute positions on the 640x480 screen (the
+        MNG DEFI chunk carries them), and the sprite's own position offsets
+        them.  Masked layers are lipsync alternatives: drawing all of them
+        stacks every mouth shape at once, so only the rest pose (bit 0) is
+        drawn -- and note those masked layers include the character's head,
+        not just the mouth.  See ../../FORMATS.md.
+        """
+        import yagagraphics
+        surface = yagagraphics.target_surface()
         anim = self.anim
-        locator = getattr(anim, "locator", "?") if anim is not None else "none"
-        _stub.LOG.record("call", "%s.Render" % self._yaga_name,
-                         "(%s at %s)" % (locator, self.position))
+        inner = getattr(anim, "anim", None)
+        if surface is None or inner is None or not inner.frames:
+            return
+
+        index = int(self.currentFrame or 0) % len(inner.frames)
+        ox, oy = int(self.position.x or 0), int(self.position.y or 0)
+        drawn = 0
+        for layer in inner.frames[index].layers:
+            if layer.rgba is None or not layer.w or not layer.h:
+                continue
+            if layer.mask and not (layer.mask & PHONEME_REST):
+                continue
+            surface.blit(_surface_for(layer), (ox + layer.x, oy + layer.y))
+            drawn += 1
+        if drawn:
+            _stub.LOG.record("call", "%s.Render" % self._yaga_name,
+                             "(%s frame %d, %d layers)"
+                             % (getattr(anim, "locator", "?"), index, drawn))
 
     def __nonzero__(self):
         return True

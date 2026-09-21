@@ -20,7 +20,7 @@ import os
 import re
 import time
 
-from . import patches, pyz
+from . import constfix, patches, pyz
 
 # ScummVM-style identification: md5 of the first 5000 bytes of a key data file.
 # These match the detection entries on the ScummVM 'yaga' branch.
@@ -190,12 +190,28 @@ def clean_source(path: str) -> int:
     return removed
 
 
-def apply_patches(path, module):
-    """Repair known decompiler mistakes in one recovered module."""
+def apply_patches(path, module, pyc_path=None):
+    """Repair decompiler mistakes in one recovered module.
+
+    First the general repair -- list literals holding constant-pool indices
+    instead of the constants -- then any hand-written patch for this module.
+    """
     with open(path, encoding="utf-8") as fh:
-        text = fh.read()
+        original = text = fh.read()
+
+    applied_general = []
+    if pyc_path and os.path.isfile(pyc_path):
+        try:
+            from xdis import load_module
+            code = load_module(pyc_path)[3]
+            text, fixes = constfix.repair(text, code)
+            applied_general = ["%s: const-index list %s" % (module, f) for f in fixes]
+        except Exception as exc:
+            applied_general = ["%s: const repair skipped (%s)" % (module, exc)]
+
     fixed, applied, problems = patches.apply(module, text)
-    if fixed != text:
+    applied = applied_general + applied
+    if fixed != original:
         with open(path, "w", encoding="utf-8") as fh:
             fh.write(fixed)
     return applied, problems
@@ -229,7 +245,7 @@ def decompile(pyc_dir: str, src_dir: str, verbose: bool = False):
                     decompile_file(src, out)
                 clean_source(dest)
                 module = rel[:-3].replace("\\", "/")
-                applied, problems = apply_patches(dest, module)
+                applied, problems = apply_patches(dest, module, src)
                 patched.extend(applied)
                 patch_problems.extend(problems)
                 ok += 1
