@@ -410,9 +410,10 @@ class ISprite(_stub.Stub):
 
         The game sets renderMask itself either side of a line -- ResetMouth
         puts it back to ROOT -- so this only speaks while a stream is
-        actually running.
+        actually running.  Newest first: if the game has left an old stream
+        attached, the line being spoken now is the one to follow.
         """
-        for child in list(object.__getattribute__(self, "_children")):
+        for child in reversed(list(object.__getattribute__(self, "_children"))):
             mask = getattr(child, "CurrentMask", None)
             if mask is None:
                 continue

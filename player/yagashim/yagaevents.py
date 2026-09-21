@@ -563,13 +563,29 @@ class EventStreamPlayback(_stub.Stub):
         except (TypeError, ValueError):
             pass
 
+    # How long past its last event a stream keeps speaking.  At least one
+    # frame at the game's 10 fps, so the final shape -- usually ROOT, the
+    # mouth closing -- is always applied before the stream goes quiet.
+    TAIL = 0.25
+
     def CurrentMask(self):
+        """The mouth shape this stream wants now, or None once it is done.
+
+        Going quiet at the end matters.  The game does not always detach a
+        finished stream: the cape sequence runs one line straight into the
+        next without the StopTalkie that would remove it, so the talking
+        sprite ends up carrying both.  A finished stream that kept answering
+        with its last shape held Sam's mouth shut for the whole ten-second
+        line that followed.
+        """
         started = object.__getattribute__(self, "_started")
         stream = self.stream
         if started is None or not isinstance(stream, IEventStream):
             return None
-        return stream.MaskAt(time.time() - started
-                             + object.__getattribute__(self, "_offset"))
+        elapsed = time.time() - started + object.__getattribute__(self, "_offset")
+        if elapsed > stream.duration + self.TAIL:
+            return None
+        return stream.MaskAt(elapsed)
 
     def __nonzero__(self):
         return True
