@@ -17,6 +17,7 @@ Nothing draws yet: Render() records the call so the render order shows up in
 the trace.
 """
 
+import random
 import struct
 import sys
 import time
@@ -347,6 +348,10 @@ class ISprite(_stub.Stub):
         self._drawn = []          # (layer, screen x, screen y) from the last frame
         object.__setattr__(self, "_sinks", [])
         object.__setattr__(self, "_children", [])
+        # Named layers the game has switched off, e.g. the nine eye
+        # directions it does not want, and when this sprite next blinks.
+        object.__setattr__(self, "_layer_flags", {})
+        object.__setattr__(self, "_blink_at", time.time() + 1.0 + random.random() * 4.0)
         # ROOT: the rest pose, and what the game resets a mouth to.
         self.renderMask = PHONEME_REST
         _live.append(self)
@@ -501,8 +506,50 @@ class ISprite(_stub.Stub):
                 return
         self.currentFrame = step % frame_count if frame_count else 0
 
-    def SetLayerFlag(self, *a, **kw):
-        _stub.LOG.record("call", "%s.SetLayerFlag" % self._yaga_name, _stub._args(a, kw))
+    def SetLayerFlag(self, name=None, flag=None, on=1, *a, **kw):
+        """Turn a named layer on or off.
+
+        This is how the game picks between alternatives that all carry mask
+        0 and would otherwise draw at once:
+
+            def SetConditionalLayers(self):
+                self.TurnOnLayerInSet(character.c_EyeDirections, 'FRONT')
+
+        which turns on FRONT and turns off the other nine eye directions.
+        There is only one flag in play, LF_LAYER_ON, so any call is about
+        visibility.
+        """
+        if name is None:
+            return
+        flags = object.__getattribute__(self, "_layer_flags")
+        flags[str(name).upper()] = bool(on)
+
+    def _blink(self):
+        """Which blink layer is showing, if any.
+
+        Idle poses carry BLINK1 (half closed) and BLINK2 (shut) as mask 0
+        layers, and no script in the game ever touches them -- the engine
+        blinks characters itself.  Drawing them unconditionally, as a mask of
+        0 otherwise means, leaves every character with their eyes shut.
+
+        The shape of the blink is read off the art: open, half, shut, half,
+        open.  Its timing is not in the data anywhere, so the rate here is a
+        reconstruction rather than a recovered constant.
+        """
+        stages = (("BLINK1", 0.07), ("BLINK2", 0.09), ("BLINK1", 0.07))
+        now = time.time()
+        start = object.__getattribute__(self, "_blink_at")
+        elapsed = now - start
+        if elapsed < 0:
+            return None
+        for layer, length in stages:
+            if elapsed < length:
+                return layer
+            elapsed -= length
+        # Done: wait a few seconds, staggered so a roomful does not blink
+        # in unison.
+        object.__setattr__(self, "_blink_at", now + 2.5 + random.random() * 4.0)
+        return None
 
     def SetVolume(self, *a, **kw):
         pass
@@ -554,6 +601,8 @@ class ISprite(_stub.Stub):
         except (TypeError, ValueError):
             wanted = PHONEME_REST
         index = int(self.currentFrame or 0) % len(inner.frames)
+        flags = object.__getattribute__(self, "_layer_flags")
+        blinking = self._blink()
         ox, oy = int(self.position.x or 0), int(self.position.y or 0)
         self._drawn = []
         drawn = 0
@@ -561,6 +610,12 @@ class ISprite(_stub.Stub):
             if layer.rgba is None or not layer.w or not layer.h:
                 continue
             if layer.mask and not (layer.mask & wanted):
+                continue
+            name = (layer.name or "").upper()
+            if name.startswith("BLINK"):
+                if name != blinking:
+                    continue
+            elif flags.get(name) is False:
                 continue
             lx, ly = ox + layer.x, oy + layer.y
             image = _surface_for(layer)

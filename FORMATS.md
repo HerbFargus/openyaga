@@ -148,6 +148,36 @@ This matters for extraction: dropping every masked layer leaves the character
 **without a head**, not merely without a mouth. Rendering with phoneme `0x1`
 gives the neutral pose.
 
+### `mask == 0` does not mean "always draw"
+
+That rule — linyaga's, and ours until a playtest caught it — is incomplete.
+Unmasked layers also include *alternatives*, and drawing them all stacks them
+on top of each other. Two kinds:
+
+**Named layers the game switches.** `SetLayerFlag(name, LF_LAYER_ON, on)`
+turns one on or off, and `character.py` uses it to pick one of a set:
+
+```python
+def SetConditionalLayers(self):
+    self.TurnOnLayerInSet(character.c_EyeDirections, 'FRONT')
+```
+
+`c_EyeDirections` is `['EYES-N', 'EYES-NE', ... 'FRONT', 'CAMERA']` — ten eye
+directions, all mask 0, of which exactly one should be visible.
+
+**Blink layers, which no script ever touches.** An idle pose carries `BLINK1`
+(eyes half closed) and `BLINK2` (eyes shut), both mask 0. Nothing in the
+game's Python mentions them, so the engine blinks characters by itself. Draw
+them as the rule says and every character sits there with their eyes glued
+shut — which is exactly what happened here, and what the first real playthrough
+found. 57 of 700 animations sampled carry them.
+
+The blink reads off the art as open → `BLINK1` → `BLINK2` → `BLINK1` → open.
+Its *rate* is not in the data anywhere, so any reader has to invent one.
+
+`PLACEHOLDER` also turns up as a mask 0 layer in 49 of those 700, and has not
+been looked into.
+
 ## Event streams (`.evb`, 2,884 files)
 
 The masks above say *what* the mouth shapes are; `.evb` says *when* — and also

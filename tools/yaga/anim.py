@@ -29,8 +29,21 @@ PHONEME_NAMES = {
 }
 
 
-def layer_visible(layer, phoneme=PHONEME_REST) -> bool:
-    """The engine's rule, from is_phoneme()/Animation_Draw() in linyaga."""
+def layer_visible(layer, phoneme=PHONEME_REST, blink=False) -> bool:
+    """The engine's rule, from is_phoneme()/Animation_Draw() in linyaga --
+    plus the part linyaga does not have.
+
+    "mask == 0 means always draw" is not the whole story.  An idle pose also
+    carries BLINK1 (eyes half closed) and BLINK2 (eyes shut) as mask 0
+    layers, and drawing them is how a character ends up staring out of the
+    picture with their eyes glued shut.  No game script ever touches them:
+    the engine blinks characters by itself, so a still frame wants them off.
+
+    Pass blink=True to get them back -- they are the blink artwork, and worth
+    having if that is what you are after.
+    """
+    if not blink and layer.name.upper().startswith("BLINK"):
+        return False
     if layer.mask == 0:
         return True
     if phoneme == PHONEME_ALL:
