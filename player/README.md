@@ -159,6 +159,7 @@ Useful while developing:
 | `--screenshot F` | save the last frame |
 | `--click X,Y@FRAME` | inject a click; repeatable, for scripted sequences |
 | `--hover X,Y@FRAME` | move the pointer without clicking, to exercise rollover |
+| `--subtitles` | show the dialogue text; the game defaults it off |
 | `--debug-hit` | log every sprite hit test and which bound rejected it |
 
 Everything the game asks of the engine is written to `trace.log`.

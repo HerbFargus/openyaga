@@ -55,8 +55,10 @@ Characters lip-sync to their dialogue and animations fire their own sound
 effects: the `.evb` event streams are read in [FORMATS.md](FORMATS.md), which
 linyaga lists as its one missing feature.
 
-Not yet: subtitles on screen, though the text for every line is in the script
-XML. Expect rough edges — this has been driven through one game's opening, not
+Subtitles work too (`--subtitles`; the game defaults them off), drawn with the
+game's own bitmap fonts.
+
+Expect rough edges — this has been driven through one game's opening, not
 played to the end.
 
 See [player/README.md](player/README.md) for the design and next steps.

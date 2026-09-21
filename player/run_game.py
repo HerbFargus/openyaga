@@ -286,6 +286,8 @@ def main():
                     help="inject a click: X,Y or X,Y@FRAME (repeatable)")
     ap.add_argument("--hover", action="append", default=[],
                     help="move the pointer without clicking: X,Y@FRAME")
+    ap.add_argument("--subtitles", action="store_true",
+                    help="show the dialogue text (the game defaults it off)")
     args = ap.parse_args()
 
     if sys.version_info[0] != 2:
@@ -361,6 +363,18 @@ def main():
         import globals as game_globals
         print "starting in scene %r instead of %r" % (args.scene, game_globals.INITIAL_SCENE)
         game_globals.INITIAL_SCENE = args.scene
+
+    if args.subtitles:
+        # The game keeps this off by default and offers it in the options
+        # menu; its 't' shortcut is behind DEBUG_BUILD, which retail sets to
+        # 0.  Setting the flag rather than calling EnableSubtitles: that also
+        # reaches for the current line's text sprite, and at this point there
+        # is no scene yet to have one.
+        def enable_subtitles():
+            import globals as game_globals
+            game_globals.g_GameOptions.display.subtitlesOn = 1
+            _stub.LOG.record("call", "options.subtitlesOn", "= 1")
+        _stub.FIRST_FRAME_HOOKS.append(enable_subtitles)
 
     if args.debug_hit:
         install_hit_probe()
