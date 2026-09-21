@@ -12,6 +12,11 @@ titles shipped on it:
 
 Development so far has been against Pajama Sam 4.
 
+![Pajama Sam 4 running under openyaga](docs/screenshot.png)
+
+*Sam's bedroom, rendered by openyaga from the game's own scripts and data, with
+the inventory raised.*
+
 ## What works today
 
 **`tools/` — asset extraction. Complete and in use.**
