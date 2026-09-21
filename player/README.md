@@ -272,7 +272,5 @@ Differences found by running the code, each fixed in the loader:
 
 ## Next steps
 
-3. Implement `yagaxml` on top of Python's own XML parser, feeding
-   `IContentHandler` subclasses, so the scene table loads.
-4. Then enough of `yagascene` + `yagasprite` + `yagagraphics` to composite one
-   room, reusing the decoders in `../tools`.
+Pajama Sam 4 plays through to the end (tagged `v0.1`). Next is a port from
+SDL 1.2 to SDL2, for window scaling; then the other Yaga games.

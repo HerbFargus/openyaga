@@ -37,31 +37,35 @@ streams, and the quirks in the shipped data that break naive decoders.
 and the dialogue script — which carries the full subtitle text for all 1,212
 spoken lines.
 
-## What doesn't work yet
-
-**`player/` — a standalone player. Early, but it runs.**
+**`player/` — a standalone player. Pajama Sam 4 plays start to finish.**
 
 Yaga is a C++ engine driving **Python 2.2** game scripts, which are bundled
 inside the game executable. So the game's *logic* needs no reimplementation —
 only the engine beneath it. The player reads the scripts out of the copy you
 own, then provides the eleven `yaga*` modules they import, backed by SDL.
 
-It boots unaided through the logos into the game, renders rooms and
-characters, takes mouse input, plays music, dialogue and sound effects, walks
-between rooms, and opens the inventory. Clickpoints animate and speak, and
-cutscenes hand control back when they end. The Bink movies play, with sound.
+Pajama Sam 4 has been played through to the end on it: rooms, characters,
+music, dialogue and sound effects, the inventory, the minigames, the Bink
+movies with sound, and saving and loading — saves are interchangeable with
+the original game's, both ways.
 
 Characters lip-sync to their dialogue and animations fire their own sound
 effects: the `.evb` event streams are read in [FORMATS.md](FORMATS.md), which
-linyaga lists as its one missing feature.
+linyaga lists as its one missing feature. Subtitles work too (`--subtitles`;
+the game defaults them off), drawn with the game's own bitmap fonts.
 
-Subtitles work too (`--subtitles`; the game defaults them off), drawn with the
-game's own bitmap fonts.
+Setup also repairs the decompiler's mistakes in the recovered scripts, checked
+against the original bytecode, and fixes a few bugs in the original game that
+could freeze or crash it (see `player/yagaboot/patches.py`).
 
-Expect rough edges — this has been driven through one game's opening, not
-played to the end.
+See [player/README.md](player/README.md) for the design.
 
-See [player/README.md](player/README.md) for the design and next steps.
+## What doesn't work yet
+
+- **The other four Yaga games are untested.** Everything was built against
+  Pajama Sam 4; Putt-Putt and the Backyard titles may need more of the engine.
+- **SDL 1.2 limits.** The window is a fixed 640x480 with no scaling. An SDL2
+  port is next.
 
 ## You need your own copy of the game
 
