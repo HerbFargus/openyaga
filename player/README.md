@@ -101,11 +101,26 @@ Opens a 640x480 window and boots the game the way it boots itself: Atari logo,
 Humongous logo, then the first room. Escape or closing the window quits.
 
 **Dialogue and movies need ffmpeg.** SDL cannot open either format the game
-ships them in, so both go through ffmpeg. It is looked for in
-`OPENYAGA_FFMPEG`, then on `PATH`, then as `player/ffmpeg.exe`, then in the
-usual install directories -- dropping a copy beside `run_game.py` needs no
-configuration at all. Nothing is bundled. Without it the player still runs,
-with the old behaviour described below each heading.
+ships them in, so both go through ffmpeg. Nothing is bundled and nothing is
+downloaded behind your back; on Windows there is a script that will fetch it:
+
+```bash
+python get_ffmpeg.py
+```
+
+That downloads one pinned LGPL build from BtbN/FFmpeg-Builds, checks it
+against a SHA-256 recorded in the script, and puts `ffmpeg.exe` beside
+`run_game.py`. On macOS or Linux you do not need it: `brew install ffmpeg` or
+`apt install ffmpeg` puts ffmpeg on `PATH`, which is searched anyway.
+
+The player looks in `OPENYAGA_FFMPEG`, then on `PATH`, then at
+`player/ffmpeg.exe`, then in the usual install directories. Without any of
+them it still runs, with the old behaviour described below each heading.
+
+openyaga stays MIT and is not a derivative work of ffmpeg -- it runs it as a
+separate program over a pipe. The binary is under its own licence. We only
+decode, and `binkvideo`, `binkaudio_dct` and `mp3` are all native ffmpeg code
+in the LGPL core, so nothing here needs a GPL build.
 
 *Dialogue.* SDL_mixer 1.2 decodes MP3 only on its single music channel, and
 this game's 1,389 lines of dialogue are MP3 -- as is the score. Left to

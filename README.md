@@ -66,7 +66,7 @@ there. `.gitignore` denies by default for exactly this reason.
 | `tools/` | Python 3, Pillow |
 | `player/` setup | Python 3, `uncompyle6` (one-time, per install) |
 | `player/` runtime | Python 2.7 + `pygame==1.9.6` — the game's code is Python 2, and converting it would silently change integer division |
-| `player/` dialogue and movies | ffmpeg, to decode the MP3 voice tracks and the Bink movies — SDL can open neither |
+| `player/` dialogue and movies | ffmpeg, to decode the MP3 voice tracks and the Bink movies — SDL can open neither. `python player/get_ffmpeg.py` fetches a pinned LGPL build on Windows; elsewhere your package manager has it |
 
 ## Prior work
 
