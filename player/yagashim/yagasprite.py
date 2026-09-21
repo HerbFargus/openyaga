@@ -668,7 +668,11 @@ class ISprite(_stub.Stub):
             if name.startswith("BLINK"):
                 if name != blinking:
                     continue
-            elif flags.get(name) is False:
+            elif not flags.get(name, 1):
+                # Not `is False`: the game's boot.py sets __builtin__.False
+                # = 0 for its 2.2-era code, so in here the name False is the
+                # int 0 and an identity test against it never matches -- no
+                # layer the game switched off was ever hidden.
                 continue
             lx, ly = ox + layer.x, oy + layer.y
             image = _surface_for(layer)
