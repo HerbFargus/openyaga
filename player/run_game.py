@@ -344,7 +344,12 @@ def main():
         sys.exit("No prepared game found.  Run setup_game.py first (Python 3).")
     manifest = json.load(open(manifest_path))
 
-    scripts = manifest["scripts"]
+    # The recovered scripts always live beside the manifest; the recorded
+    # path only says where they were when setup ran, and moving the player
+    # folder -- as consolidating the repo into openyaga/ did -- would break it.
+    scripts = os.path.join(CACHE, "scripts")
+    if not os.path.isdir(scripts):
+        scripts = manifest["scripts"]
     boot = os.path.join(scripts, "_boot", "boot.py")
     if not os.path.isfile(boot):
         sys.exit("boot.py missing from %s" % scripts)

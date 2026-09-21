@@ -40,8 +40,16 @@ def parse_phoneme(value):
     return int(v, 0)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_DATA = os.path.join(os.path.dirname(HERE), "stock-game-files", "program files", "Atari")
-DEFAULT_OUT = os.path.join(os.path.dirname(HERE), "extracted")
+# The repo sits in a workspace beside the game and anything extracted from it:
+#
+#     <workspace>/openyaga/tools/        this file
+#     <workspace>/stock-game-files/      the installed game
+#     <workspace>/extracted/             where output goes
+#
+# so nothing derived from the game ever lands inside the repo.
+WORKSPACE = os.path.dirname(os.path.dirname(HERE))
+DEFAULT_DATA = os.path.join(WORKSPACE, "stock-game-files", "program files", "Atari")
+DEFAULT_OUT = os.path.join(WORKSPACE, "extracted")
 
 
 def decode(name: str, data: bytes) -> Anim:

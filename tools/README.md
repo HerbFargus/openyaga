@@ -15,9 +15,12 @@ yaga/render.py  compositing, sprite sheets, APNG/GIF output
 yaga_extract.py CLI
 ```
 
-By default it looks for the data under
-`../stock-game-files/program files/Atari`; point `--data` at any folder holding
-`.he` files (an installed copy of the game works too).
+By default it looks for the data beside the repo, in
+`<workspace>/stock-game-files/program files/Atari`, and writes to
+`<workspace>/extracted` -- the repo lives at `<workspace>/openyaga`, and
+nothing derived from the game goes inside it. Point `--data` at any folder
+holding `.he` files (an installed copy of the game works too), and `--out`
+anywhere you like.
 
 ## Commands
 

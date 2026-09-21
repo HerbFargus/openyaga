@@ -1,15 +1,24 @@
 # openyaga -- deny by default.
 #
-# This working folder also holds the game itself, a disc image, a ScummVM
-# checkout and ~600 MB of extracted artwork.  None of that belongs in git, and
-# game-derived source must NEVER be committed, so nothing is tracked unless it
-# is explicitly listed below.  An accidental `git add -A` adds nothing new.
+# The repo lives in its own folder, beside the game, the disc image and
+# everything extracted from them:
+#
+#     <workspace>/openyaga/          this repo
+#     <workspace>/stock-game-files/  the installed game
+#     <workspace>/extracted/ ...     tools output
+#
+# Even so, nothing is tracked unless it is listed below, so an accidental
+# `git add -A` adds nothing new.  The flip side: a new top-level file is
+# ignored until it is listed here -- LICENSE and XML.md went unpublished for
+# exactly that reason.
 
 /*
 
 !.gitignore
 !README.md
 !FORMATS.md
+!XML.md
+!LICENSE
 !tools/
 !player/
 # One illustrative screenshot for the README.
@@ -17,32 +26,8 @@
 
 # Reconstructed game source: a derivative work of the original program.
 # It belongs only on a machine that owns the game.  Never commit it.
-game-source/
 player/gamecache/
-
-# Generated output -- reproducible from tools/, too big to track.
-extracted/
-extracted-cards/
 
 __pycache__/
 *.pyc
 *.pyo
-player/a5.png
-player/a45.png
-player/anim_*.png
-player/chk_*.png
-player/in1.png
-player/noclick.png
-player/click.png
-player/plain.png
-player/final.png
-player/click2.png
-player/snd*.png
-player/ok.png
-player/nav*.png
-player/door.png
-player/logo.png
-player/boot.png
-player/inv*.png
-player/aqua*.png
-player/no*.png

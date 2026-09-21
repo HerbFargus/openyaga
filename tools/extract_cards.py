@@ -41,7 +41,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from yaga import he, mng, render
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(HERE)
+# The workspace the repo sits in: the game and the card output live beside
+# the repo, not inside it (see yaga_extract.py).
+ROOT = os.path.dirname(os.path.dirname(HERE))
 DATA = os.path.join(ROOT, "stock-game-files", "program files", "Atari")
 OUT = os.path.join(ROOT, "pajama-man-cards")
 
