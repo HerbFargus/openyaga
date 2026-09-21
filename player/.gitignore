@@ -22,3 +22,4 @@ rundir/
 cursor_enabled.log
 cache/
 ffmpeg.exe
+trace-*.log

@@ -293,6 +293,24 @@ def _move(source, target):
         return False
 
 
+def _in_use(path):
+    """True if another process has this file open.
+
+    Windows refuses to rename a file someone else holds open, and that is
+    exactly the case to detect: a second player started while the first is
+    still writing its trace.
+    """
+    if not os.path.exists(path):
+        return False
+    probe = path + ".probe"
+    try:
+        os.rename(path, probe)
+    except OSError:
+        return True
+    os.rename(probe, path)
+    return False
+
+
 def rotate(path, keep=3):
     """Move path to path.1, path.1 to path.2, and so on, keeping `keep`.
 
@@ -369,7 +387,16 @@ def main():
 
     import _stub
     log_path = os.path.join(HERE, "trace.log")
-    rotate(log_path)
+    if _in_use(log_path):
+        # Another copy of the player is running and writing this file.
+        # Rotating it underneath that copy destroyed its record once -- a
+        # playtester's frozen session was lost to a test run started while
+        # it was still open -- so this run keeps a trace of its own.
+        log_path = os.path.join(HERE, "trace-%d.log" % os.getpid())
+        sys.stderr.write("openyaga: another copy is running; this run's trace "
+                         "goes to %s\n" % os.path.basename(log_path))
+    else:
+        rotate(log_path)
     rotate(os.path.join(HERE, "crash.log"))
     # The game's own log, which is where its printed tracebacks land.
     import glob
