@@ -29,6 +29,17 @@ and animations. See [tools/README.md](tools/README.md).
 python tools/yaga_extract.py sprites --pattern "bedroom/*" --formats frames,sheet
 ```
 
+**`ENGINE_API.md` — the engine interface, for anyone reimplementing it.**
+
+Every engine name the game's scripts use -- module by module, class by class,
+with how often the scripts and a full playthrough touch each -- plus the rules
+the names do not tell you: how the loop, animation events, layers, input and
+sound actually have to behave. Generated from the scripts, the shim and play
+traces by `player/engine_api.py`. To check another implementation against
+this one, record a session (`run_game.py --record`), replay it in both, and
+compare the traces call by call (`player/compare_traces.py`): a replay here
+reproduces its recording's trace exactly.
+
 **`FORMATS.md` — the format documentation.**
 
 Containers, both sprite codecs, the lipsync/phoneme system, the `.evb` event
