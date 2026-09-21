@@ -34,9 +34,30 @@ class DecodeError(Exception):
 
 
 class Layer(object):
-    __slots__ = ("name", "x", "y", "w", "h", "mask", "rgba", "note")
+    """One bitmap in a frame.
+
+    `rgba` is the decoded pixels; `image` is the same thing as a pygame
+    Surface, which is what the engine's own layers expose -- font_loader does
+    `anim.frames[0].layers[0].image` and hands it to yagagraphics.IImage.
+    """
+
+    __slots__ = ("name", "x", "y", "w", "h", "mask", "rgba", "note", "_surface")
+
+    @property
+    def image(self):
+        if self._surface is None and self.rgba is not None and self.w and self.h:
+            import pygame
+            surface = pygame.image.frombuffer(
+                bytes(bytearray(self.rgba)), (self.w, self.h), "RGBA")
+            try:
+                surface = surface.convert_alpha()
+            except pygame.error:
+                surface = surface.copy()
+            self._surface = surface
+        return self._surface
 
     def __init__(self, name="", x=0, y=0, w=0, h=0, mask=0, rgba=None, note=""):
+        self._surface = None
         self.name = name
         self.x, self.y, self.w, self.h = x, y, w, h
         self.mask = mask

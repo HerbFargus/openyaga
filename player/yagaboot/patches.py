@@ -35,6 +35,21 @@ from __future__ import annotations
 import re
 
 PATCHES = [
+    # Not a decompiler mistake: the bytecode really does build an empty list.
+    # But every other use of preloadHandles is a dict -- has_key, item
+    # assignment, .values() -- and PreloadForRoom itself resets it to {}.  The
+    # list only survives until a room is entered the usual way, so the game
+    # never trips over it; starting mid-game with --scene does, 21 times in a
+    # single room.  A dict from the outset is what the rest of the file means.
+    {
+        "module": "pj_preload_manager",
+        "why": "preloadHandles starts as a list but is used as a dict "
+               "everywhere; harmless in normal play, fatal when a room is "
+               "entered directly",
+        "pattern": re.compile(r"self\.preloadHandles = \[\]"),
+        "replacement": "self.preloadHandles = {}",
+        "expect": 2,
+    },
     # utility.AddVectors -- LOAD_ATTR x / y / z
     {
         "module": "python_shared/utility/utility",

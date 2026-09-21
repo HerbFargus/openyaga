@@ -162,6 +162,24 @@ class IRenderTarget(object):
         _stub.LOG.record("new", "yagagraphics.IRenderTarget", "(subclassed)")
 
 
+class IImage(_stub.Stub):
+    """A single bitmap.  font_loader builds these from a layer's surface;
+    other callers pass a resource."""
+
+    def __init__(self, source=None):
+        _stub.Stub.__init__(self, "yagagraphics.IImage")
+        surface = source
+        if surface is not None and not hasattr(surface, "get_size"):
+            anim = getattr(source, "anim", None)
+            layers = anim.frames[0].layers if (anim and anim.frames) else []
+            surface = layers[0].image if layers else None
+        self.surface = surface
+        self.width, self.height = surface.get_size() if surface is not None else (0, 0)
+
+    def __nonzero__(self):
+        return True
+
+
 class IImageAnim(_stub.Stub):
     """A decoded animation, as the sprite manager wraps it:
 
@@ -201,6 +219,7 @@ _mod.VideoDevice = VideoDevice
 _mod.RenderTarget = RenderTarget
 _mod.GraphicsSystem = GraphicsSystem
 _mod.IRenderTarget = IRenderTarget
+_mod.IImage = IImage
 _mod.IImageAnim = IImageAnim
 import yagascene as _scene
 _mod.Rect = _scene.Rect
