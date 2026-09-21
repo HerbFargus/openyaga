@@ -57,6 +57,16 @@ def read(path):
     """The bytes at a game path, or None if nothing matches."""
     p = _normalise(path)
 
+    # The game asks for .evt and the disc has only .evb.  Both handlers are
+    # registered side by side in globals.py -- EvtHandler() then EvbHandler()
+    # -- so the pair is a source format and its compiled form, and only the
+    # compiled one shipped.  Without this every talkie loses its lipsync and
+    # the game prints "Warning: no event stream" for all 1,284 of them.
+    if p.lower().endswith(".evt"):
+        binary = read(p[:-4] + ".evb")
+        if binary is not None:
+            return binary
+
     if "/" in p:
         head, rest = p.split("/", 1)
         entry = _archives.get(head.lower())

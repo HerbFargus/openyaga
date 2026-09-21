@@ -63,6 +63,10 @@ def tick_all():
     """
     for sprite in list(_live):
         try:
+            sprite._apply_lipsync()
+        except Exception:
+            pass
+        try:
             inner = getattr(sprite.anim, "anim", None)
             if inner is not None and inner.frames:
                 sprite._advance(len(inner.frames))
@@ -342,6 +346,9 @@ class ISprite(_stub.Stub):
         self._anim_id = None
         self._drawn = []          # (layer, screen x, screen y) from the last frame
         object.__setattr__(self, "_sinks", [])
+        object.__setattr__(self, "_children", [])
+        # ROOT: the rest pose, and what the game resets a mouth to.
+        self.renderMask = PHONEME_REST
         _live.append(self)
         # Not a list: the game sets attributes on it, e.g.
         # `sprite.talkies.continuous = true`.
@@ -372,6 +379,45 @@ class ISprite(_stub.Stub):
                 count = 0
             _stub.Stub.__setattr__(self, "frameCount", count)
             _stub.Stub.__setattr__(self, "currentFrame", 0)
+
+    def AddChild(self, child=None, *a, **kw):
+        """Children are how the engine attaches a talkie's event stream.
+
+        character.PlayTalkie builds the stream, hangs it off the sprite and
+        runs it; the sprite is then what reads the mouth shapes out of it.
+        """
+        children = object.__getattribute__(self, "_children")
+        if child is not None and child not in children:
+            children.append(child)
+
+    InsertChild = AddChild
+
+    def RemoveChild(self, child=None, *a, **kw):
+        children = object.__getattribute__(self, "_children")
+        if child in children:
+            children.remove(child)
+
+    def RemoveChildren(self, *a, **kw):
+        del object.__getattribute__(self, "_children")[:]
+
+    def _apply_lipsync(self):
+        """Put the current mouth shape into renderMask, once a frame.
+
+        The game sets renderMask itself either side of a line -- ResetMouth
+        puts it back to ROOT -- so this only speaks while a stream is
+        actually running.
+        """
+        for child in list(object.__getattribute__(self, "_children")):
+            mask = getattr(child, "CurrentMask", None)
+            if mask is None:
+                continue
+            try:
+                current = mask()
+            except Exception:
+                continue
+            if current is not None:
+                self.renderMask = current
+                return
 
     def RegisterEventSink(self, sink, *a, **kw):
         sinks = object.__getattribute__(self, "_sinks")
@@ -503,6 +549,10 @@ class ISprite(_stub.Stub):
             return
 
         self._advance(len(inner.frames))
+        try:
+            wanted = int(self.renderMask)
+        except (TypeError, ValueError):
+            wanted = PHONEME_REST
         index = int(self.currentFrame or 0) % len(inner.frames)
         ox, oy = int(self.position.x or 0), int(self.position.y or 0)
         self._drawn = []
@@ -510,7 +560,7 @@ class ISprite(_stub.Stub):
         for layer in inner.frames[index].layers:
             if layer.rgba is None or not layer.w or not layer.h:
                 continue
-            if layer.mask and not (layer.mask & PHONEME_REST):
+            if layer.mask and not (layer.mask & wanted):
                 continue
             lx, ly = ox + layer.x, oy + layer.y
             image = _surface_for(layer)

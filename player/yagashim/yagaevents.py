@@ -207,6 +207,10 @@ class EventManager(_stub.Stub):
                 _stub.LOG.record("call", "yagaevents.dispatch",
                                  "-> %s: %s" % (type(exc).__name__, exc))
 
+    def CreateEventStreamPlayback(self, name="", *a, **kw):
+        """A player for one .evb stream, which the caller then fills in."""
+        return EventStreamPlayback(name)
+
     def _inject_test_hover(self):
         """Move the pointer with no button, so rollover can be exercised.
 
@@ -363,6 +367,99 @@ def EventManagerFactory():
 _mod.EventManager = EventManagerFactory
 _mod.EventSource = EventSource
 _mod.IEventSource = IEventSource
+
+
+class IEventStream(object):
+    """A parsed .evb.  The engine builds one from a loaded resource:
+
+        stream = yagaevents.IEventStream(eventResource)
+
+    For a talkie that is the lipsync track; see evb.py for the format.  A
+    stream we cannot read is not an error -- the room event streams are a
+    different shape -- it simply has no events and drives nothing.
+    """
+
+    def __init__(self, res=None):
+        import evb
+        self.resource = res
+        self.path = str(getattr(res, "path", "") or "")
+        data = getattr(res, "data", None)
+        self.events = evb.parse(data) if data else None
+        self.duration = self.events[-1][0] if self.events else 0.0
+        if self.events:
+            _stub.LOG.record("new", "yagaevents.IEventStream",
+                             "(%s) %d mouth shapes over %.2fs"
+                             % (self.path, len(self.events), self.duration))
+
+    def MaskAt(self, elapsed):
+        """The mouth shape in force `elapsed` seconds in.
+
+        The last event at or before the moment wins: these are state changes,
+        not pulses, so a shape holds until the next one replaces it.
+        """
+        if not self.events:
+            return None
+        mask = None
+        for when, value in self.events:
+            if when > elapsed:
+                break
+            mask = value
+        return mask
+
+    def __len__(self):
+        return len(self.events or ())
+
+    def __nonzero__(self):
+        return True
+
+
+class EventStreamPlayback(_stub.Stub):
+    """What CreateEventStreamPlayback returns.
+
+    character.PlayTalkie hangs one of these off the talking sprite:
+
+        self.streamPlayback.stream = yagaevents.IEventStream(eventResource)
+        self.__sprite.AddChild(self.streamPlayback)
+        self.streamPlayback.Run(globals.g_SpriteManager.spriteScene)
+
+    so the sprite is what reads it, once a frame.  Timed off the wall clock
+    like the audio it belongs to, rather than off frames, so a slow moment
+    cannot walk the mouth out of step with the voice.
+    """
+
+    def __init__(self, name=""):
+        _stub.Stub.__init__(self, "yagaevents.EventStreamPlayback")
+        self.stream = None
+        self.name = name
+        object.__setattr__(self, "_started", None)
+        object.__setattr__(self, "_offset", 0.0)
+
+    def Run(self, scene=None, *a, **kw):
+        object.__setattr__(self, "_started", time.time())
+
+    def Stop(self, scene=None, *a, **kw):
+        object.__setattr__(self, "_started", None)
+
+    def Seek(self, offset=0.0, *a, **kw):
+        try:
+            object.__setattr__(self, "_offset", float(offset))
+        except (TypeError, ValueError):
+            pass
+
+    def CurrentMask(self):
+        started = object.__getattribute__(self, "_started")
+        stream = self.stream
+        if started is None or not isinstance(stream, IEventStream):
+            return None
+        return stream.MaskAt(time.time() - started
+                             + object.__getattribute__(self, "_offset"))
+
+    def __nonzero__(self):
+        return True
+
+
+_mod.IEventStream = IEventStream
+_mod.EventStreamPlayback = EventStreamPlayback
 
 _mod.__wrapped_module__ = sys.modules[__name__]
 sys.modules[__name__] = _mod
