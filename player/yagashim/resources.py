@@ -21,6 +21,11 @@ see ../../FORMATS.md.
 import os
 import zipfile
 
+# The real checks, captured before install_path_lookup replaces them, so
+# nothing in here can recurse through the replacement.
+_real_isfile = os.path.isfile
+_real_exists = os.path.exists
+
 _archives = {}      # "rooms" -> (ZipFile, {lowercase member: real member})
 _loose = []         # data dirs, searched for real files
 _missing = set()    # paths asked for and not found, for reporting
@@ -40,7 +45,7 @@ def init(data_dirs):
                 continue
             try:
                 zf = zipfile.ZipFile(os.path.join(d, name))
-            except zipfile.BadZipFile:
+            except getattr(zipfile, 'BadZipFile', getattr(zipfile, 'BadZipfile', Exception)):
                 continue
             index = {}
             for member in zf.namelist():
@@ -79,7 +84,7 @@ def read(path):
     # Not in an archive: a real file, either as given or relative to a data dir.
     for root in [None] + _loose:
         candidate = p if root is None else os.path.join(root, p)
-        if os.path.isfile(candidate):
+        if _real_isfile(candidate):
             with open(candidate, "rb") as fh:
                 return fh.read()
 
@@ -108,7 +113,7 @@ def locate(path):
     p = _normalise(path)
     for root in [None] + _loose:
         candidate = p if root is None else os.path.join(root, p)
-        if os.path.isfile(candidate):
+        if _real_isfile(candidate):
             return candidate
 
     wanted = p.lower()
@@ -120,6 +125,67 @@ def locate(path):
                 if rel == wanted:
                     return full
     return None
+
+
+def has(path):
+    """Whether a game path names something, without reading it.
+
+    Archive members and loose files in the data directories count; nothing
+    else does.  Cheap enough to answer the game's own existence checks.
+    """
+    p = _normalise(path)
+    if "/" in p:
+        head, rest = p.split("/", 1)
+        entry = _archives.get(head.lower())
+        if entry and rest.lower() in entry[1]:
+            return True
+    for root in _loose:
+        if _real_isfile(os.path.join(root, p)):
+            return True
+    return False
+
+
+def install_path_lookup():
+    """Let the game's existence checks see its own data.
+
+    The original runs with its install folder as the working directory, so
+    a relative game path like interface/shoes_enter.mng is a real file there,
+    and the scripts lean on that:
+
+        elif tagName == 'invAnim':
+            if os.path.isfile(val) and name != None and name != '':
+                self.__curItem.invAnimsDict[name] = val
+
+    The player runs from player/rundir instead, which is what keeps saves
+    out of the install -- and every such check quietly failed.  Inventory
+    items lost their enter animation, and pj_inventory_manager only shows an
+    item `if enterAnim:`, so the inventory never appeared at all.
+
+    A real file is always checked first, so saves behave as before.  Only
+    relative paths fall back to the game's data, and never the save folder
+    or anything starting with a dot: otherwise saves left in an install by
+    the original game could be taken for the player's own.
+    """
+    def _falls_back(path):
+        if not isinstance(path, basestring) or not path:
+            return False
+        if os.path.isabs(path) or path.startswith("."):
+            return False
+        first = _normalise(path).split("/", 1)[0].lower()
+        return first != "savegames"
+
+    def isfile(path):
+        if _real_isfile(path):
+            return True
+        return _falls_back(path) and has(path)
+
+    def exists(path):
+        if _real_exists(path):
+            return True
+        return _falls_back(path) and has(path)
+
+    os.path.isfile = isfile
+    os.path.exists = exists
 
 
 def exists(path):

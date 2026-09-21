@@ -74,6 +74,11 @@ class Parser(object):
 
         handler = self.contentHandler
         parser = xml.parsers.expat.ParserCreate()
+        # Plain strings, as the engine's own parser gave: expat defaults to
+        # unicode, and those unicode values ended up pickled into saves
+        # (u'shoetree' where the original writes 'shoetree').  Every XML file
+        # the game ships is pure ASCII, so nothing is lost either way.
+        parser.returns_unicode = 0
         # Ordered attributes keep document order and give us a flat
         # [name, value, name, value, ...] list to wrap.
         parser.ordered_attributes = 1

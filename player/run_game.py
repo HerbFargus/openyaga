@@ -376,6 +376,7 @@ def main():
     # The engine resolves paths like "data/scenes.xml" against the .he archives.
     import resources
     n = resources.init(manifest["data_dirs"])
+    resources.install_path_lookup()
     _stub.LOG.note("indexed %d archives" % n)
 
     # Resolve output paths before the chdir below, so nothing lands in the
