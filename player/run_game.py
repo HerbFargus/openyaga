@@ -45,6 +45,11 @@ def main():
     _stub.LOG.open(log_path)
     _stub.LOG.note("=== %s ===" % manifest.get("title", "unknown game"))
 
+    # The engine resolves paths like "data/scenes.xml" against the .he archives.
+    import resources
+    n = resources.init(manifest["data_dirs"])
+    _stub.LOG.note("indexed %d archives" % n)
+
     # The game resolves data paths relative to the executable's folder.
     exe_dir = os.path.dirname(manifest["executable"])
     if os.path.isdir(exe_dir):

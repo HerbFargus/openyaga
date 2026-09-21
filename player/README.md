@@ -107,13 +107,13 @@ format, so that much is real.
 The game currently reaches:
 
 ```
-YAGA: Boot process
-Processing boot script...
-Getting global objects...
 Loading scenes from data/scenes.xml...
+Loading scene leavins...
+Loading scene trading_cards...
+Loaded 36 scenes
 ```
 
-and stops because `yagaxml` cannot parse. 105 engine calls, 9 of the 11 modules.
+and stops when it asks the engine to load its first sprite -- the mouse cursor.
 
 ## The worklist, in the game's own startup order
 
@@ -129,9 +129,26 @@ and stops because `yagaxml` cannot parse. 105 engine calls, 9 of the 11 modules.
 4. **`yagaevents`** — `EventManager`, `KeyCodes`, and `IEventReciever` as a
    subclassable base.
 5. **`yagascene`** — `SceneManager`, `CreateScene`, `Point`, `ISceneEventSink`.
-6. **`yagaxml`** — `Parser` and `IContentHandler`. **Next up:** the game loads
-   `data/scenes.xml` through it during boot and cannot proceed without it.
-7. `yagasound.SoundSystem`, `yagafont`, `yagasprite` proper — not yet reached.
+6. **`yagaxml`** — `Parser`, `IContentHandler`. *Implemented* on expat, which
+   is what the original used too. All 36 scenes now load.
+7. **`yagares.ResourceManager.Load`** — **next up.** Returns a resource the
+   sprite manager wraps in `yagagraphics.IImageAnim`. This is where the MNG
+   and RLE decoders in `../tools` plug in.
+8. `yagasound.SoundSystem`, `yagafont`, `yagasprite` proper — not yet reached.
+
+## Resource paths
+
+The engine addresses content through paths whose first component is an
+**archive name**, not a folder: `data/scenes.xml` means `scenes.xml` inside
+`data.he`. Failing that it falls back to a real file on disk, which is how the
+loose `interface/` and `movies/` folders are reached. Lookups are
+case-insensitive in both directions -- the scripts lowercase paths before
+asking, the archives store mixed case. `resources.py` implements this.
+
+One engine behaviour worth knowing: `LoadAnim` asks for `<name>.rle` **before**
+`<name>.mng` and only falls back if the RLE is missing. In Pajama Sam 4 the two
+sets are completely disjoint -- 2,290 MNG and 435 RLE with no shared base name
+-- so the substitution never actually fires, but the engine supports it.
 
 ## Python 2.2 vs 2.7
 
