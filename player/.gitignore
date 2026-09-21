@@ -1,6 +1,8 @@
 # Never commit anything derived from the game: this is a reconstruction of
 # copyrighted source, and it belongs only on the machine that owns the game.
 gamecache/
+gamecache-*/
+rundir-*/
 __pycache__/
 *.pyc
 

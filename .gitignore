@@ -29,6 +29,7 @@
 # Reconstructed game source: a derivative work of the original program.
 # It belongs only on a machine that owns the game.  Never commit it.
 player/gamecache/
+player/gamecache-*/
 
 __pycache__/
 *.pyc
