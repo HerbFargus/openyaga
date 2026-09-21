@@ -287,6 +287,11 @@ class EventManager(_stub.Stub):
                 self._running = False
             clock.tick(self.maxLoopFrequency or 30)
 
+        try:
+            import yagasound
+            yagasound.cleanup()      # remove the temp files SDL needed for MP3
+        except Exception:
+            pass
         yagagraphics.shutdown()
 
     def StopEventLoop(self):

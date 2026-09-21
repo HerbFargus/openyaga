@@ -157,6 +157,10 @@ class Stub(object):
     def __getitem__(self, key):
         return self.__getattr__("item")
 
+    def __setitem__(self, key, value):
+        LOG.record("set", "%s[%r]" % (object.__getattribute__(self, "_yaga_name"), key),
+                   "= %s" % _brief(value))
+
     def __str__(self):
         return "<%s>" % object.__getattribute__(self, "_yaga_name")
 

@@ -52,6 +52,77 @@ def _surface_for(layer):
 _mod = _stub.StubModule(__name__)
 
 
+class SoundList(object):
+    """talkies.sounds -- character.PlayTalkie adds to it with an explicit
+    `.sounds.__iadd__(sound)`, which a plain stub cannot answer because
+    Stub.__getattr__ refuses dunder names."""
+
+    def __init__(self):
+        self.items = []
+
+    def __iadd__(self, sound):
+        self.items.append(sound)
+        return self
+
+    def __iter__(self):
+        return iter(self.items)
+
+    def __len__(self):
+        return len(self.items)
+
+    def Clear(self, *a, **kw):
+        self.items = []
+
+
+class TalkieList(_stub.Stub):
+    """What sprite.talkies is.  script.py drives it as
+
+        speakerObj.talkies.Clear()
+        speakerObj.talkies[0] = soundObj
+        speakerObj.talkies.Run(soundScene)
+
+    so it needs item assignment and a Run that starts what was assigned.
+    """
+
+    def __init__(self, name):
+        _stub.Stub.__init__(self, name)
+        self.continuous = 0
+        object.__setattr__(self, "_items", {})
+        object.__setattr__(self, "sounds", SoundList())
+
+    def Clear(self, *a, **kw):
+        object.__getattribute__(self, "_items").clear()
+        object.__getattribute__(self, "sounds").Clear()
+
+    def __setitem__(self, index, value):
+        object.__getattribute__(self, "_items")[index] = value
+
+    def __getitem__(self, index):
+        return object.__getattribute__(self, "_items").get(index)
+
+    def __len__(self):
+        return len(object.__getattribute__(self, "_items"))
+
+    def _all(self):
+        return (list(object.__getattribute__(self, "_items").values())
+                + list(object.__getattribute__(self, "sounds")))
+
+    def Run(self, scene=None, *a, **kw):
+        for sound in self._all():
+            if hasattr(sound, "Run"):
+                sound.Run(scene)
+                _stub.LOG.record("call", "yagasprite.talkies.Run",
+                                 "(%s)" % getattr(sound, "path", "?"))
+
+    def Stop(self, scene=None, *a, **kw):
+        for sound in self._all():
+            if hasattr(sound, "Stop"):
+                sound.Stop(scene)
+
+    def __nonzero__(self):
+        return True
+
+
 class ISprite(_stub.Stub):
     """Base class; the game subclasses this for its own sprite types."""
 
@@ -76,7 +147,7 @@ class ISprite(_stub.Stub):
         self._drawn = []          # (layer, screen x, screen y) from the last frame
         # Not a list: the game sets attributes on it, e.g.
         # `sprite.talkies.continuous = true`.
-        self.talkies = _stub.Stub("%s.talkies" % name)
+        self.talkies = TalkieList("%s.talkies" % name)
 
     def Run(self, scene=None, *a, **kw):
         """Start playing.  Sprites do not animate until asked.
@@ -206,6 +277,8 @@ class TalkieSprite(ISprite):
 
 
 _mod.ISprite = ISprite
+_mod.TalkieList = TalkieList
+_mod.SoundList = SoundList
 _mod.Sprite = Sprite
 _mod.TalkieSprite = TalkieSprite
 

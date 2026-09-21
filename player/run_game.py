@@ -48,6 +48,15 @@ def main():
     if not os.path.isfile(boot):
         sys.exit("boot.py missing from %s" % scripts)
 
+    # The game ships its own Python 2.2 standard library (PyInstaller bundled
+    # os, re, string, tempfile and friends), and those sit on the path ahead of
+    # the real ones.  The game is welcome to them -- it was built against them
+    # -- but our shims are not: the 2.2 tempfile has no mkstemp, for one.
+    # Importing them here, before the game's directory joins the path, puts the
+    # real modules in sys.modules where every later import will find them.
+    import struct, zlib, zipfile, tempfile, time, re, hashlib  # noqa: F401
+    import xml.parsers.expat  # noqa: F401
+
     # Stubs first so `import yagascene` finds ours, then the game's own modules.
     sys.path.insert(0, scripts)
     sys.path.insert(0, SHIMS)
