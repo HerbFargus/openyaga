@@ -350,6 +350,20 @@ def main():
                     help="press a key: NAME@FRAME, e.g. escape@40 or space@90")
     ap.add_argument("--subtitles", action="store_true",
                     help="show the dialogue text (the game defaults it off)")
+    view = ap.add_argument_group(
+        "display", "remembered between runs; in game F11 or Alt+Enter toggles "
+                   "fullscreen, F10 integer scaling, F12 smoothing")
+    view.add_argument("--fullscreen", dest="fullscreen", action="store_const", const=True)
+    view.add_argument("--windowed", dest="fullscreen", action="store_const", const=False)
+    view.add_argument("--integer", dest="integer", action="store_const", const=True,
+                      help="scale by whole multiples only, for crisp pixels")
+    view.add_argument("--fit", dest="integer", action="store_const", const=False,
+                      help="scale to fill the window (the default)")
+    view.add_argument("--smooth", dest="smooth", action="store_const", const=True)
+    view.add_argument("--sharp", dest="smooth", action="store_const", const=False)
+    view.add_argument("--scale", type=int,
+                      help="starting window size as a multiple of 640x480 "
+                           "(default: the largest that fits the screen)")
     args = ap.parse_args()
 
     if sys.version_info[0] != 2:
@@ -413,6 +427,9 @@ def main():
 
     # Resolve output paths before the chdir below, so nothing lands in the
     # player's game folder.
+    import display
+    display.configure(fullscreen=args.fullscreen, integer=args.integer,
+                      smooth=args.smooth, scale=args.scale)
     _stub.FRAME_LIMIT = args.frames
     _stub.SCREENSHOT = os.path.abspath(args.screenshot) if args.screenshot else None
     _stub.SKIP_VIDEO = args.skip_video

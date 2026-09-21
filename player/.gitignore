@@ -23,3 +23,5 @@ cursor_enabled.log
 cache/
 ffmpeg.exe
 trace-*.log
+.venv-sdl2/
+display.json

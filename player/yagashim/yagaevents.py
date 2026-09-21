@@ -252,6 +252,21 @@ class Timer(_stub.Stub):
         return True
 
 
+def _display_key(ev):
+    """Which display option a key toggles, or None: F11 or Alt+Enter for
+    fullscreen, F10 for integer scaling, F12 for smooth scaling."""
+    if ev.key == pygame.K_F11:
+        return "fullscreen"
+    if ev.key in (pygame.K_RETURN, pygame.K_KP_ENTER) and getattr(ev, "mod", 0) & pygame.KMOD_ALT:
+        return "fullscreen"
+    if ev.key == pygame.K_F10:
+        return "integer"
+    if ev.key == pygame.K_F12:
+        return "smooth"
+    return None
+
+
+
 class EventManager(_stub.Stub):
     def __init__(self):
         _stub.Stub.__init__(self, "yagaevents.EventManager()")
@@ -348,7 +363,7 @@ class EventManager(_stub.Stub):
             _stub.LOG.record("call", "test.hover", "frame %d at (%d, %d)"
                              % (frame, x, y))
             pygame.event.post(pygame.event.Event(
-                pygame.MOUSEMOTION, pos=(x, y), rel=(0, 0), buttons=(0, 0, 0)))
+                pygame.MOUSEMOTION, pos=(x, y), rel=(0, 0), buttons=(0, 0, 0), test=True))
 
     def _inject_test_keys(self):
         """Press and release a key, for run_game.py --key."""
@@ -369,11 +384,11 @@ class EventManager(_stub.Stub):
             _stub.LOG.record("call", "test.click", "frame %d at (%d, %d)"
                              % (frame, x, y))
             pygame.event.post(pygame.event.Event(
-                pygame.MOUSEMOTION, pos=(x, y), rel=(0, 0), buttons=(0, 0, 0)))
+                pygame.MOUSEMOTION, pos=(x, y), rel=(0, 0), buttons=(0, 0, 0), test=True))
             pygame.event.post(pygame.event.Event(
-                pygame.MOUSEBUTTONDOWN, pos=(x, y), button=1))
+                pygame.MOUSEBUTTONDOWN, pos=(x, y), button=1, test=True))
             pygame.event.post(pygame.event.Event(
-                pygame.MOUSEBUTTONUP, pos=(x, y), button=1))
+                pygame.MOUSEBUTTONUP, pos=(x, y), button=1, test=True))
 
     def _pump_input(self):
         """Translate pygame input into the events the game expects.
@@ -381,16 +396,29 @@ class EventManager(_stub.Stub):
         Mouse motion arrives as two separate axis events carrying the
         coordinate in `value`; that is how cursor.CCursor tracks the pointer.
         """
+        import display
         for ev in pygame.event.get():
             if ev.type == pygame.QUIT:
                 # Closing the window is how to quit.  Escape belongs to the
                 # game, which opens its options menu with it.
                 self.StopEventLoop()
-            elif ev.type == pygame.MOUSEMOTION:
+                continue
+            if ev.type == pygame.VIDEORESIZE:
+                display.resized(ev.size)
+                continue
+            if ev.type in (pygame.KEYDOWN, pygame.KEYUP) and _display_key(ev):
+                # The window's own keys, kept from the game.  (The game uses
+                # F2 and F6-F9; nothing it listens for is taken.)
+                if ev.type == pygame.KEYDOWN:
+                    display.toggle(_display_key(ev))
+                continue
+            if ev.type == pygame.MOUSEMOTION:
+                # The window may be any size; the game lives in 640x480.
+                pos = ev.pos if getattr(ev, "test", False) else display.to_game(ev.pos)
                 self._dispatch(Event(EEventClass.CLASS_MOUSE,
-                                     EInputEvent.IEVENT_AXIS_POS_X, value=ev.pos[0]))
+                                     EInputEvent.IEVENT_AXIS_POS_X, value=pos[0]))
                 self._dispatch(Event(EEventClass.CLASS_MOUSE,
-                                     EInputEvent.IEVENT_AXIS_POS_Y, value=ev.pos[1]))
+                                     EInputEvent.IEVENT_AXIS_POS_Y, value=pos[1]))
             elif ev.type in (pygame.MOUSEBUTTONDOWN, pygame.KEYDOWN):
                 import yagasprite
                 yagasprite.skip_videos()
