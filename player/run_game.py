@@ -104,6 +104,64 @@ def install_click_probe():
 
     _rm.CRoomManager.DefaultInputHandler = probe
 
+    # Rollover: what the room found under a moving pointer, and whether it
+    # got as far as changing the cursor.
+    move_original = _rm.CRoomManager.HandleMouseMoveEvent
+    seen_move = {}
+
+    def move_probe(self):
+        import globals as game_globals
+        cursor = game_globals.g_Cursor
+        inbounds = []
+        for obj in self.interactiveObjects:
+            try:
+                if obj.InBounds():
+                    inbounds.append(getattr(obj, "debugName", None)
+                                    or obj.__class__.__name__)
+            except Exception, exc:
+                inbounds.append("!%s" % type(exc).__name__)
+        key = tuple(inbounds)
+        if key not in seen_move:
+            seen_move[key] = True
+            _stub.LOG.record("call", "hover.HandleMouseMoveEvent",
+                             "cursor=(%s,%s) type=%s over=%s"
+                             % (cursor.screenX(), cursor.screenY(),
+                                cursor.GetCursorType(), inbounds or "nothing"))
+        return move_original(self)
+
+    _rm.CRoomManager.HandleMouseMoveEvent = move_probe
+
+    from python_shared.adventure import clickpoint as _cp2
+    roll_original = _cp2.CClickPoint.Rollover
+    seen_roll = [0]
+
+    def roll_probe(self):
+        import globals as game_globals
+        if seen_roll[0] < 4:
+            seen_roll[0] += 1
+            _stub.LOG.record("call", "hover.Rollover",
+                             "%s myRegion=%s itemOnCursor=%r"
+                             % (self.__class__.__name__,
+                                getattr(self, "myRegion", "?"),
+                                game_globals.g_Cursor.itemOnCursor))
+        return roll_original(self)
+
+    _cp2.CClickPoint.Rollover = roll_probe
+
+    from python_shared.adventure import cursor as _cursor_mod
+    change_original = _cursor_mod.CCursor.ChangeCursor
+    seen_change = [0]
+
+    def change_probe(self, cursorType, itemName=None):
+        if seen_change[0] < 6:
+            seen_change[0] += 1
+            _stub.LOG.record("call", "hover.ChangeCursor",
+                             "%r item=%r hourglass=%r"
+                             % (cursorType, itemName, self.hourglassCursor))
+        return change_original(self, cursorType, itemName)
+
+    _cursor_mod.CCursor.ChangeCursor = change_probe
+
     # And the clickpoint instances, which advance their own animation on a
     # counter rather than through the sprite's clock.
     from python_shared.adventure import clickpoint as _cp
@@ -226,6 +284,8 @@ def main():
                     help="log every CursorOverSprite test and which bound failed")
     ap.add_argument("--click", action="append", default=[],
                     help="inject a click: X,Y or X,Y@FRAME (repeatable)")
+    ap.add_argument("--hover", action="append", default=[],
+                    help="move the pointer without clicking: X,Y@FRAME")
     args = ap.parse_args()
 
     if sys.version_info[0] != 2:
@@ -276,6 +336,10 @@ def main():
         coords, _, frame = spec.partition("@")
         x, y = (int(v) for v in coords.split(","))
         _stub.CLICKS.append((int(frame) if frame else 5 + n * 25, x, y))
+    for n, spec in enumerate(args.hover):
+        coords, _, frame = spec.partition("@")
+        x, y = (int(v) for v in coords.split(","))
+        _stub.HOVERS.append((int(frame) if frame else 5 + n * 25, x, y))
 
     # Run from our own directory, not the game's.  The game writes its saves
     # to "./SaveGames" and its log to "./<project>.log", both relative to the

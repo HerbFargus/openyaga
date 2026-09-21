@@ -144,7 +144,7 @@ movie as zero length, which takes you straight to the bedroom.
 
 | | |
 |---|---|
-| move the mouse | the cursor follows; rolling over things highlights them |
+| move the mouse | the pointer changes over anything clickable, as it does in the original: an outline arrow normally, a filled one over a clickpoint, an hourglass while the game is busy, and nothing at all during a cutscene |
 | move to the bottom of the screen | raises the inventory |
 | click a door | walks to the next room |
 | click an inventory item | uses it -- the card holder opens the album |
@@ -158,6 +158,7 @@ Useful while developing:
 | `--frames N` | stop after N frames instead of running until you quit |
 | `--screenshot F` | save the last frame |
 | `--click X,Y@FRAME` | inject a click; repeatable, for scripted sequences |
+| `--hover X,Y@FRAME` | move the pointer without clicking, to exercise rollover |
 | `--debug-hit` | log every sprite hit test and which bound rejected it |
 
 Everything the game asks of the engine is written to `trace.log`.

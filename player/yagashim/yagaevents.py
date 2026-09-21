@@ -207,6 +207,20 @@ class EventManager(_stub.Stub):
                 _stub.LOG.record("call", "yagaevents.dispatch",
                                  "-> %s: %s" % (type(exc).__name__, exc))
 
+    def _inject_test_hover(self):
+        """Move the pointer with no button, so rollover can be exercised.
+
+        Hovering is a separate thing to test from clicking: it is what changes
+        the cursor over something clickable, and a click would hide that by
+        running whatever is under it."""
+        for frame, x, y in _stub.HOVERS:
+            if frame != self.frames:
+                continue
+            _stub.LOG.record("call", "test.hover", "frame %d at (%d, %d)"
+                             % (frame, x, y))
+            pygame.event.post(pygame.event.Event(
+                pygame.MOUSEMOTION, pos=(x, y), rel=(0, 0), buttons=(0, 0, 0)))
+
     def _inject_test_click(self):
         """Post a synthetic move-and-click, so input can be exercised without
         a person at the keyboard.  Driven by run_game.py --click."""
@@ -272,6 +286,7 @@ class EventManager(_stub.Stub):
         tick = Event(EEventClass.CLASS_TIMER, ETimerEvent.TIMER_TICK)
 
         while self._running:
+            self._inject_test_hover()
             self._inject_test_click()
             self._pump_input()
 

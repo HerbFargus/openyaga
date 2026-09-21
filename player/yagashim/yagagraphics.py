@@ -77,6 +77,9 @@ class RenderTarget(_stub.Stub):
         self.width = getattr(mode, "width", SCREEN_WIDTH)
         self.height = getattr(mode, "height", SCREEN_HEIGHT)
         self.targetType = targetType
+        # id -> (size, hotspot, data, mask), as the game loads them.
+        object.__setattr__(self, "_cursors", {})
+        object.__setattr__(self, "_cursor_id", None)
 
         pygame.init()
         _surface = pygame.display.set_mode((self.width, self.height))
@@ -99,11 +102,72 @@ class RenderTarget(_stub.Stub):
     def SetCursor(self, *a, **kw):
         pass
 
-    def LoadCursorFile(self, *a, **kw):
-        return 0
+    # -- the cursor --------------------------------------------------------
+    #
+    # The game never takes its own software cursor path: CCursor.__init__
+    # sets g_forceHWCursor true and CursorTest only ever clears useHWCursor,
+    # so every ChangeCursor ends up here.  Left as no-ops the pointer stayed
+    # a plain arrow over everything, when the game had been saying all along
+    # which cursor it wanted -- the filled arrow over anything clickable, a
+    # direction arrow over an exit, the hourglass while it is busy.
 
-    def SetCursorByID(self, *a, **kw):
-        pass
+    def __setattr__(self, name, value):
+        """`cursorVisible` is the game hiding and showing the pointer.
+
+        CCursor.Render sets it false whenever the cursor is disabled, which
+        is what happens for the length of a cutscene -- so honouring it is
+        what makes the pointer disappear while Sam is busy, and come back
+        when control returns.
+        """
+        _stub.Stub.__setattr__(self, name, value)
+        if name == "cursorVisible":
+            try:
+                pygame.mouse.set_visible(bool(value))
+            except Exception:
+                pass
+
+    def LoadCursorFile(self, path=None, idValue=None, *a, **kw):
+        """Read a .cur and keep it under the id the game gave it."""
+        if path is None or idValue is None:
+            return 0
+        if idValue in self._cursors:
+            return idValue
+        import resources
+        import cur
+        data = resources.read(str(path))
+        if not data:
+            _stub.LOG.record("call", "yagagraphics.RenderTarget.LoadCursorFile",
+                             "(%s) not found" % path)
+            return 0
+        parsed = cur.parse(data)
+        if parsed is None:
+            _stub.LOG.record("call", "yagagraphics.RenderTarget.LoadCursorFile",
+                             "(%s) could not be read as a cursor" % path)
+            return 0
+        self._cursors[idValue] = parsed
+        _stub.LOG.record("call", "yagagraphics.RenderTarget.LoadCursorFile",
+                         "(%s) -> id %s, %dx%d hotspot %s"
+                         % (path, idValue, parsed[0][0], parsed[0][1], parsed[1]))
+        return idValue
+
+    def SetCursorByID(self, idValue=None, *a, **kw):
+        entry = self._cursors.get(idValue)
+        if entry is None or idValue == self._cursor_id:
+            return
+        size, hotspot, data, mask = entry
+        try:
+            pygame.mouse.set_cursor(size, hotspot, data, mask)
+            # object.__setattr__, not plain assignment: Stub.__setattr__ files
+            # attributes away in _yaga_attrs, which __getattribute__ never
+            # looks at once __dict__ has the name -- so the "already showing
+            # this one" guard above would have read None for ever and reset
+            # the cursor on every rollover.
+            object.__setattr__(self, "_cursor_id", idValue)
+            _stub.LOG.record("call", "yagagraphics.RenderTarget.SetCursorByID",
+                             "id %s" % idValue)
+        except Exception, exc:
+            _stub.LOG.record("call", "yagagraphics.RenderTarget.SetCursorByID",
+                             "(%s) %s" % (idValue, exc))
 
     def screenshot(self, path):
         if _surface is not None:
