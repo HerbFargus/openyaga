@@ -72,3 +72,11 @@ The two projects have different goals from this one. A ScummVM engine must
 embed a Python interpreter in C++ to run the original bytecode; this runs the
 scripts under CPython instead, which is far less work and correspondingly less
 portable. Nothing here is upstreamable to ScummVM — only the knowledge is.
+
+## Licence
+
+MIT, for the code and documentation here. See [LICENSE](LICENSE).
+
+That covers this repository only. Pajama Sam 4 and the other Yaga games remain
+the property of their rights holders; nothing of theirs is included here, and
+you supply your own copy of the game.
