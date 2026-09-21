@@ -91,11 +91,35 @@ __builtin__.true  = __builtin__.True
 They appear nowhere in the game's own modules, so anything that runs these
 scripts must execute `boot.py` first.
 
-## Running the trace
+## Playing
 
 ```bash
 C:\Python27\python.exe run_game.py
 ```
+
+Opens a 640x480 window and boots the game the way it boots itself: Atari logo,
+Humongous logo, then the first room. Escape or closing the window quits.
+
+| | |
+|---|---|
+| move the mouse | the cursor follows; rolling over things highlights them |
+| move to the bottom of the screen | raises the inventory |
+| click a door | walks to the next room |
+| click an inventory item | uses it -- the card holder opens the album |
+
+Useful while developing:
+
+| flag | |
+|---|---|
+| `--scene NAME` | start in a room instead of the logos, e.g. `--scene bedroom` |
+| `--frames N` | stop after N frames instead of running until you quit |
+| `--screenshot F` | save the last frame |
+| `--click X,Y@FRAME` | inject a click; repeatable, for scripted sequences |
+| `--debug-hit` | log every sprite hit test and which bound rejected it |
+
+Everything the game asks of the engine is written to `trace.log`.
+
+## How it runs
 
 `yagashim/` stands in for the eleven native modules. Nothing is hand-written per
 module: names spring into existence on first use and every access, call and
