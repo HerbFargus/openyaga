@@ -216,12 +216,13 @@ class Movie(object):
                 pass
 
     def Stop(self):
-        if self._channel is not None:
+        if self._sound is not None:
+            # The soundtrack itself, not whatever now owns its channel.
             try:
-                self._channel.stop()
+                self._sound.stop()
             except Exception:
                 pass
-            self._channel = None
+        self._channel = None
         self._reap()
         self._finished = True
         if self._temp:

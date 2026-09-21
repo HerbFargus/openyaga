@@ -162,7 +162,16 @@ class ISound(object):
     @property
     def isPlaying(self):
         if self.chunk is not None:
-            return bool(self.channel and self.channel.get_busy())
+            # Busy is not enough: it says the *channel* is playing something.
+            # Once this sound ends its channel is free, and the next sound to
+            # start takes the first free one -- at Agitator Lake that is the
+            # water, which repeats every few seconds.  Asking only get_busy()
+            # then reported the crane operator's finished line as playing for
+            # ever, and the conversation waiting on it never moved on.  The
+            # channel has to be busy with *this* sound.
+            if not self.channel or not self.channel.get_busy():
+                return False
+            return self.channel.get_sound() is self.chunk
         if not (self.is_music and _mixer_ready):
             return False
         # SDL_mixer has ONE music channel, so get_busy() alone says only that
@@ -200,8 +209,10 @@ class ISound(object):
 
     def Stop(self, scene=None, *a, **kw):
         global _music_owner
-        if self.chunk is not None and self.channel:
-            self.channel.stop()
+        if self.chunk is not None:
+            # Stop this sound wherever it is playing -- not whatever has since
+            # taken the channel it started on.
+            self.chunk.stop()
         elif self.is_music and _mixer_ready:
             if _music_owner is self:
                 _music_owner = None
