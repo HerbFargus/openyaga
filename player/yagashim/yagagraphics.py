@@ -102,11 +102,13 @@ class RenderTarget(_stub.Stub):
         object.__setattr__(self, "_cursors", {})
         object.__setattr__(self, "_cursor_id", None)
 
-        pygame.init()
-        _surface = pygame.display.set_mode((self.width, self.height))
-        pygame.display.set_caption("openyaga")
+        # The game draws into a fixed 640x480 surface; display scales it to
+        # the window (see display.py).
+        import display
+        _surface = display.open_window("openyaga")
         _stub.LOG.record("new", "yagagraphics.RenderTarget",
-                         "(%dx%d window opened)" % (self.width, self.height))
+                         "(%dx%d picture, %s)" % (self.width, self.height,
+                                                  display.describe()))
 
     # -- the per-frame cycle ----------------------------------------------
     def RenderBegin(self, clearFlags=0):
@@ -115,7 +117,8 @@ class RenderTarget(_stub.Stub):
 
     def RenderEnd(self):
         if _surface is not None:
-            pygame.display.flip()
+            import display
+            display.present()
 
     def RenderImage(self, img, opacity=1.0, rcDst=None, rcSrc=None):
         """Draw an image: how screen_capture.CImageSprite renders, and so how
@@ -179,7 +182,8 @@ class RenderTarget(_stub.Stub):
             return
         size, hotspot, data, mask = entry
         try:
-            pygame.mouse.set_cursor(size, hotspot, data, mask)
+            import display
+            display.set_cursor(size, hotspot, data, mask)
             # object.__setattr__, not plain assignment: Stub.__setattr__ files
             # attributes away in _yaga_attrs, which __getattribute__ never
             # looks at once __dict__ has the name -- so the "already showing

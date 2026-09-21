@@ -64,8 +64,9 @@ See [player/README.md](player/README.md) for the design.
 
 - **The other four Yaga games are untested.** Everything was built against
   Pajama Sam 4; Putt-Putt and the Backyard titles may need more of the engine.
-- **SDL 1.2 limits.** The window is a fixed 640x480 with no scaling. An SDL2
-  port is next.
+- **SDL2 is new.** This branch moves the player to SDL2 (pygame 2), for a
+  resizable window, fullscreen and integer scaling; v0.1 is the SDL 1.2
+  build.
 
 ## You need your own copy of the game
 
@@ -79,7 +80,7 @@ there. `.gitignore` denies by default for exactly this reason.
 |---|---|
 | `tools/` | Python 3, Pillow |
 | `player/` setup | Python 3, `uncompyle6` (one-time, per install) |
-| `player/` runtime | Python 2.7 + `pygame==1.9.6` — the game's code is Python 2, and converting it would silently change integer division |
+| `player/` runtime | Python 2.7 + `pygame==2.0.3` (SDL2; the last pygame for Python 2.7) — the game's code is Python 2, and converting it would silently change integer division |
 | `player/` dialogue and movies | ffmpeg, to decode the MP3 voice tracks and the Bink movies — SDL can open neither. `python player/get_ffmpeg.py` fetches a pinned LGPL build on Windows; elsewhere your package manager has it |
 
 ## Prior work

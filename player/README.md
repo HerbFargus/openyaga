@@ -94,12 +94,30 @@ scripts must execute `boot.py` first.
 ## Playing
 
 ```bash
+C:\Python27\python.exe -m pip install pygame==2.0.3
 C:\Python27\python.exe run_game.py
 ```
 
-Opens a 640x480 window and boots the game the way it boots itself: Atari logo,
+Opens a window and boots the game the way it boots itself: Atari logo,
 Humongous logo, then the first room. Close the window to quit. Escape is the
 game's: it opens the options menu, as it did in the original.
+
+**The window.** The game draws its fixed 640x480 picture and the player
+scales it to the window, keeping the 4:3 shape (`yagashim/display.py`). The
+window opens at the largest whole multiple of 640x480 that fits the screen,
+and can be resized freely.
+
+| key | flag | |
+|---|---|---|
+| F11 or Alt+Enter | `--fullscreen` / `--windowed` | borderless fullscreen at the desktop's resolution |
+| F10 | `--integer` / `--fit` | whole multiples only (2x, 3x) for crisp pixels, or fill the window |
+| F12 | `--smooth` / `--sharp` | filtered or nearest-neighbour scaling |
+| | `--scale N` | starting window size, N x 640x480 |
+
+Choices made with the keys are remembered in `player/display.json`. The game
+itself uses F2 and F6-F9, so none of these take a key it listens for. The
+player declares itself DPI aware, so on a high-DPI screen the picture is
+scaled once, by the player, instead of again by Windows.
 
 **Saving and loading** work as in the original: Escape, then Save, and the
 game photographs the room onto your cursor -- drop it in a slot, type a name,
@@ -272,5 +290,6 @@ Differences found by running the code, each fixed in the loader:
 
 ## Next steps
 
-Pajama Sam 4 plays through to the end (tagged `v0.1`). Next is a port from
-SDL 1.2 to SDL2, for window scaling; then the other Yaga games.
+Pajama Sam 4 plays through to the end (tagged `v0.1`, SDL 1.2). This branch
+moves to SDL2 for window scaling; once it has been played through, the other
+Yaga games.
