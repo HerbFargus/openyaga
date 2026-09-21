@@ -98,7 +98,14 @@ C:\Python27\python.exe run_game.py
 ```
 
 Opens a 640x480 window and boots the game the way it boots itself: Atari logo,
-Humongous logo, then the first room. Escape or closing the window quits.
+Humongous logo, then the first room. Close the window to quit. Escape is the
+game's: it opens the options menu, as it did in the original.
+
+| key | does |
+|---|---|
+| Escape | the options menu (not on the map, the logos, the TV room or a few minigames) |
+| Space or `.` | cut the current line of dialogue short |
+| any key or click | cut a movie short |
 
 **Dialogue and movies need ffmpeg.** SDL cannot open either format the game
 ships them in, so both go through ffmpeg. Nothing is bundled and nothing is
@@ -177,6 +184,7 @@ Useful while developing:
 | `--screenshot F` | save the last frame |
 | `--click X,Y@FRAME` | inject a click; repeatable, for scripted sequences |
 | `--hover X,Y@FRAME` | move the pointer without clicking, to exercise rollover |
+| `--key NAME@FRAME` | press a key, e.g. `escape@40`, `space@90`, `k@60` |
 | `--subtitles` | show the dialogue text; the game defaults it off |
 | `--debug-hit` | log every sprite hit test and which bound rejected it |
 

@@ -123,6 +123,7 @@ FRAME_LIMIT = 0
 SCREENSHOT = None
 CLICKS = []
 HOVERS = []          # move the pointer without pressing anything
+KEYS = []            # (frame, pygame key, character) to press and release
 
 # Probes that can only be installed after boot: importing a game module at
 # setup time runs its module body, which reads globals the game has not filled

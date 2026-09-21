@@ -286,6 +286,18 @@ _mod.IRenderTarget = IRenderTarget
 _mod.IImage = IImage
 _mod.IImageAnim = IImageAnim
 import yagascene as _scene
+class ClearFlags(object):
+    """What RenderBegin is asked to clear.  Only ever tested as a bit mask --
+    screen_capture does `if clearFlags & ClearFlags.CLEAR_BACK` -- so it has
+    to be a real number, and a stub made opening the options menu crash.
+    The engine's values are not recorded anywhere; these are distinct bits,
+    which is all the game relies on."""
+    CLEAR_BACK = 0x1
+    CLEAR_Z = 0x2
+    CLEAR_STENCIL = 0x4
+
+
+_mod.ClearFlags = ClearFlags
 _mod.Rect = _scene.Rect
 _mod.target_surface = target_surface
 _mod.shutdown = shutdown

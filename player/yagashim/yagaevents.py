@@ -99,6 +99,111 @@ class Event(object):
         return "<Event %s/%s value=%r>" % (self.eventClass, self.eventType, self.value)
 
 
+class KeyCodes(object):
+    """The engine's names for the keys that are not characters.
+
+    Numbered as linyaga numbers them (sys.h, KEYCODE_FIRST = 0x100 and on in
+    order), which is the only surviving statement of the engine's table.
+    The game compares against these by name everywhere but one place, and
+    that one place is the rule that matters:
+
+        elif msg.elementID < yagaevents.KeyCodes.KEY_CODES_BEGIN:
+            ...self.__strData[...] += chr(msg.elementID)
+
+    -- anything below KEY_CODES_BEGIN is a character, anything at or above
+    it is a key.  So these all have to sit at 0x100 or higher.
+    """
+    KEY_CODES_BEGIN = 0x100
+    KEY_ESCAPE = 0x100
+    KEY_F1 = 0x101
+    KEY_F2 = 0x102
+    KEY_F3 = 0x103
+    KEY_F4 = 0x104
+    KEY_F5 = 0x105
+    KEY_F6 = 0x106
+    KEY_F7 = 0x107
+    KEY_F8 = 0x108
+    KEY_F9 = 0x109
+    KEY_F10 = 0x10A
+    KEY_F11 = 0x10B
+    KEY_F12 = 0x10C
+    KEY_BACKSPACE = 0x10D
+    KEY_TAB = 0x10E
+    KEY_ENTER = 0x10F
+    KEY_SHIFT = 0x110
+    KEY_CONTROL = 0x111
+    KEY_ALT = 0x112
+    KEY_UP = 0x113
+    KEY_DOWN = 0x114
+    KEY_LEFT = 0x115
+    KEY_RIGHT = 0x116
+
+
+_SPECIAL = {
+    pygame.K_ESCAPE: KeyCodes.KEY_ESCAPE,
+    pygame.K_BACKSPACE: KeyCodes.KEY_BACKSPACE,
+    pygame.K_TAB: KeyCodes.KEY_TAB,
+    pygame.K_RETURN: KeyCodes.KEY_ENTER,
+    pygame.K_KP_ENTER: KeyCodes.KEY_ENTER,
+    pygame.K_LSHIFT: KeyCodes.KEY_SHIFT,
+    pygame.K_RSHIFT: KeyCodes.KEY_SHIFT,
+    pygame.K_LCTRL: KeyCodes.KEY_CONTROL,
+    pygame.K_RCTRL: KeyCodes.KEY_CONTROL,
+    pygame.K_LALT: KeyCodes.KEY_ALT,
+    pygame.K_RALT: KeyCodes.KEY_ALT,
+    pygame.K_UP: KeyCodes.KEY_UP,
+    pygame.K_DOWN: KeyCodes.KEY_DOWN,
+    pygame.K_LEFT: KeyCodes.KEY_LEFT,
+    pygame.K_RIGHT: KeyCodes.KEY_RIGHT,
+}
+for _n in range(1, 13):
+    _SPECIAL[getattr(pygame, "K_F%d" % _n)] = getattr(KeyCodes, "KEY_F%d" % _n)
+
+# Windows virtual-key codes for the punctuation keys, which is what a raw
+# key event carries for them -- not their character.
+_VK_PUNCTUATION = {
+    ";": 0xBA, "=": 0xBB, ",": 0xBC, "-": 0xBD, ".": 0xBE, "/": 0xBF,
+    "`": 0xC0, "[": 0xDB, "\\": 0xDC, "]": 0xDD, "'": 0xDE,
+}
+
+# Keys the translated character event also reports, as the text entry
+# screen expects: it reads KEY_ENTER and KEY_BACKSPACE from those events.
+_TRANSLATED_SPECIALS = (KeyCodes.KEY_ENTER, KeyCodes.KEY_BACKSPACE,
+                        KeyCodes.KEY_TAB, KeyCodes.KEY_ESCAPE)
+
+
+def _raw_code(key):
+    """What a raw key-down or key-up carries: a virtual-key code.
+
+    Letters come through upper case -- the debug shortcut Ctrl+A tests a raw
+    key-down against ord('A') -- so the room's lower-case bindings ('k' for
+    keyboard hotspots, '.' to skip a line) match only the translated event,
+    and fire once per press rather than once on the way down and again on
+    the way up.  Space, digits and the special keys are the same either way.
+    """
+    if key in _SPECIAL:
+        return _SPECIAL[key]
+    if pygame.K_a <= key <= pygame.K_z:
+        return key - 32
+    if key == pygame.K_SPACE or pygame.K_0 <= key <= pygame.K_9:
+        return key
+    if 0 < key < 128:
+        return _VK_PUNCTUATION.get(chr(key))
+    return None
+
+
+def _translated_code(ev):
+    """What the translated event carries: the character typed, case and
+    shift included, or the engine code for Enter, Backspace, Tab, Escape."""
+    code = _SPECIAL.get(ev.key)
+    if code in _TRANSLATED_SPECIALS:
+        return code
+    char = getattr(ev, "unicode", u"") or u""
+    if len(char) == 1 and 32 <= ord(char) < 127:
+        return ord(char)
+    return None
+
+
 class EventSource(_stub.Stub):
     """What GetEventSource returns -- a mouse, keyboard or gamepad.
 
@@ -245,6 +350,16 @@ class EventManager(_stub.Stub):
             pygame.event.post(pygame.event.Event(
                 pygame.MOUSEMOTION, pos=(x, y), rel=(0, 0), buttons=(0, 0, 0)))
 
+    def _inject_test_keys(self):
+        """Press and release a key, for run_game.py --key."""
+        for frame, key, char in _stub.KEYS:
+            if frame != self.frames:
+                continue
+            _stub.LOG.record("call", "test.key", "frame %d key %d" % (frame, key))
+            pygame.event.post(pygame.event.Event(
+                pygame.KEYDOWN, key=key, unicode=char, mod=0))
+            pygame.event.post(pygame.event.Event(pygame.KEYUP, key=key, mod=0))
+
     def _inject_test_click(self):
         """Post a synthetic move-and-click, so input can be exercised without
         a person at the keyboard.  Driven by run_game.py --click."""
@@ -268,8 +383,8 @@ class EventManager(_stub.Stub):
         """
         for ev in pygame.event.get():
             if ev.type == pygame.QUIT:
-                self.StopEventLoop()
-            elif ev.type == pygame.KEYDOWN and ev.key == pygame.K_ESCAPE:
+                # Closing the window is how to quit.  Escape belongs to the
+                # game, which opens its options menu with it.
                 self.StopEventLoop()
             elif ev.type == pygame.MOUSEMOTION:
                 self._dispatch(Event(EEventClass.CLASS_MOUSE,
@@ -287,10 +402,23 @@ class EventManager(_stub.Stub):
                                      elementID=ev.button - 1,
                                      value=int(ev.type == pygame.MOUSEBUTTONDOWN)))
             elif ev.type in (pygame.KEYDOWN, pygame.KEYUP):
-                kind = (EInputEvent.IEVENT_BUTTON_DOWN if ev.type == pygame.KEYDOWN
-                        else EInputEvent.IEVENT_BUTTON_UP)
-                self._dispatch(Event(EEventClass.CLASS_KEYBOARD, kind,
-                                     elementID=ev.key, value=1))
+                # The keyboard source is set up with IFLAGS_RAW_BUTTONS +
+                # IFLAGS_TRANSLATE_BUTTONS, so the game gets both: raw
+                # down/up events carrying a key code, and on the way down a
+                # translated press carrying the character -- which is what
+                # the save-name entry screen reads.
+                raw = _raw_code(ev.key)
+                if raw is not None:
+                    kind = (EInputEvent.IEVENT_BUTTON_DOWN if ev.type == pygame.KEYDOWN
+                            else EInputEvent.IEVENT_BUTTON_UP)
+                    self._dispatch(Event(EEventClass.CLASS_KEYBOARD, kind,
+                                         elementID=raw, value=1))
+                if ev.type == pygame.KEYDOWN:
+                    typed = _translated_code(ev)
+                    if typed is not None:
+                        self._dispatch(Event(EEventClass.CLASS_KEYBOARD,
+                                             EInputEvent.IEVENT_BUTTON_PRESS,
+                                             elementID=typed, value=1))
 
     # -- the loop ----------------------------------------------------------
     def StartEventLoop(self):
@@ -312,6 +440,7 @@ class EventManager(_stub.Stub):
         while self._running:
             self._inject_test_hover()
             self._inject_test_click()
+            self._inject_test_keys()
             self._pump_input()
             self._pump_streams()
 
@@ -384,6 +513,7 @@ class EventManager(_stub.Stub):
         return True
 
 
+_mod.KeyCodes = KeyCodes
 _mod.EEventClass = EEventClass
 _mod.ETimerEvent = ETimerEvent
 _mod.ERecieverReturn = ERecieverReturn

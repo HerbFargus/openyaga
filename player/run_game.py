@@ -328,6 +328,8 @@ def main():
                     help="inject a click: X,Y or X,Y@FRAME (repeatable)")
     ap.add_argument("--hover", action="append", default=[],
                     help="move the pointer without clicking: X,Y@FRAME")
+    ap.add_argument("--key", action="append", default=[],
+                    help="press a key: NAME@FRAME, e.g. escape@40 or space@90")
     ap.add_argument("--subtitles", action="store_true",
                     help="show the dialogue text (the game defaults it off)")
     args = ap.parse_args()
@@ -386,6 +388,20 @@ def main():
         coords, _, frame = spec.partition("@")
         x, y = (int(v) for v in coords.split(","))
         _stub.CLICKS.append((int(frame) if frame else 5 + n * 25, x, y))
+    if args.key:
+        import pygame
+        for n, spec in enumerate(args.key):
+            name, _, frame = spec.partition("@")
+            # pygame spells special keys in capitals (K_ESCAPE) and letters
+            # in lower case (K_a).
+            key = (getattr(pygame, "K_" + name.upper(), None)
+                   or getattr(pygame, "K_" + name.lower(), None))
+            if key is None and len(name) == 1:
+                key = ord(name.lower())
+            if key is None:
+                sys.exit("--key: no key called %r" % name)
+            char = name if len(name) == 1 else {"space": " "}.get(name.lower(), "")
+            _stub.KEYS.append((int(frame) if frame else 5 + n * 25, key, char))
     for n, spec in enumerate(args.hover):
         coords, _, frame = spec.partition("@")
         x, y = (int(v) for v in coords.split(","))
