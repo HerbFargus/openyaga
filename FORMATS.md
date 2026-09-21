@@ -148,11 +148,12 @@ This matters for extraction: dropping every masked layer leaves the character
 **without a head**, not merely without a mouth. Rendering with phoneme `0x1`
 gives the neutral pose.
 
-## Lipsync: the timeline (`.evb`, 2,884 files)
+## Event streams (`.evb`, 2,884 files)
 
-The masks above say *what* the mouth shapes are; `.evb` says *when*. 1,284 of
-these sit beside the talkie audio, 1,525 in the rooms, 75 in the interface.
-linyaga lists lipsync as its one missing feature.
+The masks above say *what* the mouth shapes are; `.evb` says *when* — and also
+what sounds an animation fires. 1,284 of these sit beside the talkie audio,
+1,525 in the rooms, 75 in the interface. linyaga lists lipsync as its one
+missing feature.
 
 The game asks for `.evt`, and there is no such file on the disc:
 
@@ -171,21 +172,44 @@ Little-endian throughout:
 |---|---|---|
 | 0 | u32 | file size — always equals the real length |
 | 4 | u32 | event count |
-| 8 | — | `count` records of 28 bytes |
+| 8 | — | `count` events |
 
-and each record:
+and each event:
 
 | offset | type | meaning |
 |---|---|---|
-| 0 | f32 | time, seconds from the start of the line |
-| 4 | u32 | event type, always `31415` |
-| 8 | u32 | phoneme mask — the same bits as the layer masks above |
+| 0 | f32 | time, seconds from the start |
+| 4 | u32 | event type |
+| 8 | u32 | parameter |
 | 12 | f32 | always `1.0` |
 | 16 | u32 | stale memory, see below |
 | 20 | u32 | `0` |
-| 24 | u32 | `0` |
+| 24 | u32 | group count |
 
-All 1,284 talkie files fit `8 + count * 28 == file size` exactly, times never
+followed by that many groups, each:
+
+| type | meaning |
+|---|---|
+| u32 | name length |
+| u32 | field count |
+| char[] | name, NUL terminated |
+
+and then that many fields, each:
+
+| type | meaning |
+|---|---|
+| u32 | key length |
+| u32 | value length |
+| char[] | key, NUL terminated |
+| char[] | value, NUL terminated |
+
+**Every one of the 2,884 files parses to exactly its own length under this** —
+no slack, no shortfall. It is one format, not two: the talkie streams are
+simply the case where the group count is zero.
+
+### Type 31415 — lipsync (36,402 events)
+
+The parameter is a phoneme mask, the same bits the layers carry. Times never
 go backwards, and the last event always lands just inside its audio (1.80s
 against 1.95s; 2.47s against 2.63s; 2.33s against 2.47s).
 
@@ -193,10 +217,33 @@ An event sets the mouth and it holds until the next one — these are state
 changes, not pulses. Mask `0` means show no mouth layer at all, which is the
 closed mouth between words.
 
-**The field at +16 is not data.** It holds 199 distinct values across 10,810
-records, some resembling heap addresses (`0x01a10730`), some plainly ASCII
-(`0x30303061`, `"a000"`). It is an uninitialised pointer in a struct written
-out whole, and the engine cannot be reading it either.
+### Type 15500 — animation events (2,384 events)
+
+`globals.TYPE_ANIMATION_EVENT`. These are the ones carrying groups. Every room
+stream opens with one at t=0 naming its own animation, and the rest cue sound
+effects, e.g. `agi_broke1_op_demo.evb`:
+
+```
+0.0  AnimName  'Agi_broke1_op_demo'
+0.3  SoundName 'agi_crane'      Channel '1'
+0.8  SoundName 'agi_metalthud'  Channel '2'
+```
+
+`SoundName` and `Channel` always come in pairs — 784 of each — and `Channel` is
+only ever `'1'` or `'2'`. The field key is always `'value'`.
+`character.CAnimReciever.Raise` consumes these, playing `sfx/<SoundName>.wav`;
+it keeps its own running index and asks the stream for each event in turn, so
+a reader has to raise exactly one event per stream event, in order.
+
+These carry the incidental sound of the game: footsteps, bounces, a yawn, a
+cape being tossed. Cue counts by room run to 76 in `shoetree`, 74 in
+`happy_farm`, 50 in `dressing_room`.
+
+**The field at +16 is not data.** It holds 199 distinct values across the
+talkie records alone, some resembling heap addresses (`0x01a10730`), some
+plainly ASCII (`0x30303061`, `"a000"`); in the room files it turns up holding
+`"anim"`. It is an uninitialised pointer in a struct written out whole, and
+the engine cannot be reading it either.
 
 Two loose ends, both real:
 
@@ -205,17 +252,10 @@ Two loose ends, both real:
   the game: a mouth shape cut from the art but left in the tracks. Those
   events draw no mouth.
 
-The **room and interface** `.evb` files (1,600 of them) are a *different*
-shape: their records are ragged, around 80 bytes, which is what a record
-carrying a name looks like. Those are the animation event streams that fire
-sounds — what `CAnimReciever` and `StopEventSounds` walk — and they are not
-reversed here.
-
 ## Not yet reversed
 
-- The **room/interface `.evb` variant** described above — variable-length
-  records that appear to carry sound names, used for animation events rather
-  than lipsync.
-- **`.xml`** files are plain text and readable as-is, but the schema (scenes,
-  inventory, the 212 KB master script) is not documented here.
-- The Python 2.2 game scripts, if any are shipped compiled, have not been located.
+- The **`.xml` schema**. The files are plain text and readable as-is, but the
+  scene/inventory structure and the 212 KB master script are not documented
+  here.
+- The Python 2.2 game scripts are inside the executable, not on the disc; see
+  `player/README.md` for how they are recovered.

@@ -207,6 +207,25 @@ class EventManager(_stub.Stub):
                 _stub.LOG.record("call", "yagaevents.dispatch",
                                  "-> %s: %s" % (type(exc).__name__, exc))
 
+    def _pump_streams(self):
+        """Raise the animation events that have come due.
+
+        One event per stream event, in order and once only: CAnimReciever
+        counts them itself (`self.idx += 1`) and looks up that index in the
+        stream, so a skipped or repeated raise would read the wrong sounds
+        for the rest of the animation.
+        """
+        import evb
+        for playback in list(_playbacks):
+            try:
+                due = playback.Due()
+            except Exception:
+                continue
+            for _ in range(due):
+                self._dispatch(Event(EEventClass.CLASS_TIMER,
+                                     ETimerEvent.TIMER_TICK,
+                                     deviceID=playback.identity))
+
     def CreateEventStreamPlayback(self, name="", *a, **kw):
         """A player for one .evb stream, which the caller then fills in."""
         return EventStreamPlayback(name)
@@ -293,6 +312,7 @@ class EventManager(_stub.Stub):
             self._inject_test_hover()
             self._inject_test_click()
             self._pump_input()
+            self._pump_streams()
 
             import yagasprite
             yagasprite.tick_all()
@@ -385,11 +405,15 @@ class IEventStream(object):
         self.path = str(getattr(res, "path", "") or "")
         data = getattr(res, "data", None)
         self.events = evb.parse(data) if data else None
-        self.duration = self.events[-1][0] if self.events else 0.0
+        self.duration = self.events[-1].time if self.events else 0.0
         if self.events:
+            lipsync = len([e for e in self.events if e.type == evb.EVENT_LIPSYNC])
+            sounds = [v for e in self.events for v in e.named("SoundName")]
             _stub.LOG.record("new", "yagaevents.IEventStream",
-                             "(%s) %d mouth shapes over %.2fs"
-                             % (self.path, len(self.events), self.duration))
+                             "(%s) %d events over %.2fs -- %d mouth shapes%s"
+                             % (self.path, len(self.events), self.duration,
+                                lipsync,
+                                (", sounds %s" % (sounds,)) if sounds else ""))
 
     def MaskAt(self, elapsed):
         """The mouth shape in force `elapsed` seconds in.
@@ -397,20 +421,40 @@ class IEventStream(object):
         The last event at or before the moment wins: these are state changes,
         not pulses, so a shape holds until the next one replaces it.
         """
+        import evb
         if not self.events:
             return None
         mask = None
-        for when, value in self.events:
-            if when > elapsed:
+        for event in self.events:
+            if event.time > elapsed:
                 break
-            mask = value
+            if event.type == evb.EVENT_LIPSYNC:
+                mask = event.param
         return mask
+
+    def EventData(self, index):
+        """The groups on event `index`.
+
+        character.CAnimReciever keeps its own running index and asks for each
+        event in turn, then walks the result looking for 'SoundName' -- so
+        this has to be indexed exactly as the file is ordered.
+        """
+        try:
+            return self.events[index].elements
+        except (TypeError, IndexError):
+            return None
 
     def __len__(self):
         return len(self.events or ())
 
     def __nonzero__(self):
         return True
+
+
+# Every playback ever made, so the loop can ask each one what has come due.
+# Weak enough in practice: a room's streams are replaced as animations change
+# and a finished one costs a single comparison per frame.
+_playbacks = []
 
 
 class EventStreamPlayback(_stub.Stub):
@@ -427,18 +471,68 @@ class EventStreamPlayback(_stub.Stub):
     cannot walk the mouth out of step with the voice.
     """
 
+    _next_identity = [1]
+
     def __init__(self, name=""):
         _stub.Stub.__init__(self, "yagaevents.EventStreamPlayback")
         self.stream = None
         self.name = name
+        # CAnimReciever.Raise only answers events whose deviceID matches this,
+        # which is how one receiver ignores every other stream in the room.
+        self.identity = EventStreamPlayback._next_identity[0]
+        EventStreamPlayback._next_identity[0] += 1
         object.__setattr__(self, "_started", None)
         object.__setattr__(self, "_offset", 0.0)
+        object.__setattr__(self, "_fired", 0)
+        _playbacks.append(self)
 
     def Run(self, scene=None, *a, **kw):
         object.__setattr__(self, "_started", time.time())
+        object.__setattr__(self, "_fired", 0)
 
     def Stop(self, scene=None, *a, **kw):
         object.__setattr__(self, "_started", None)
+
+    def EventData(self, index):
+        """The groups on one event.
+
+        CAnimReciever asks the *playback* for this, not the stream:
+
+            data = self.streamPlayback.EventData(self.idx)
+            for element in data:
+                if 'SoundName' == element.name: ...
+
+        so without this the name resolved to an auto-created stub, which
+        iterates as empty -- every animation lost its sound effects and
+        nothing said so.
+        """
+        stream = self.stream
+        if not isinstance(stream, IEventStream):
+            return None
+        return stream.EventData(index)
+
+    def Due(self):
+        """How many events have come due since the last time we asked.
+
+        Timed off the wall clock rather than by accumulating the deltas the
+        room passes to Seek: a slow frame then costs nothing, where summing
+        deltas would let a long animation drift away from its own sound
+        effects.
+        """
+        started = object.__getattribute__(self, "_started")
+        stream = self.stream
+        if started is None or not isinstance(stream, IEventStream):
+            return 0
+        if not stream.events:
+            return 0
+        elapsed = time.time() - started + object.__getattribute__(self, "_offset")
+        fired = object.__getattribute__(self, "_fired")
+        due = 0
+        while fired + due < len(stream.events) and                 stream.events[fired + due].time <= elapsed:
+            due += 1
+        if due:
+            object.__setattr__(self, "_fired", fired + due)
+        return due
 
     def Seek(self, offset=0.0, *a, **kw):
         try:

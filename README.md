@@ -48,12 +48,12 @@ characters, takes mouse input, plays music, dialogue and sound effects, walks
 between rooms, and opens the inventory. Clickpoints animate and speak, and
 cutscenes hand control back when they end. The Bink movies play, with sound.
 
-Characters lip-sync to their dialogue: the `.evb` event streams are read in
-[FORMATS.md](FORMATS.md), which linyaga lists as its one missing feature.
+Characters lip-sync to their dialogue and animations fire their own sound
+effects: the `.evb` event streams are read in [FORMATS.md](FORMATS.md), which
+linyaga lists as its one missing feature.
 
-Not yet: subtitles, and the room `.evb` variant that fires animation sounds.
-Expect rough edges — this has been driven through one game's opening, not
-played to the end.
+Not yet: subtitles. Expect rough edges — this has been driven through one
+game's opening, not played to the end.
 
 See [player/README.md](player/README.md) for the design and next steps.
 

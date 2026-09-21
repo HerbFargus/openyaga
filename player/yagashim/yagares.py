@@ -91,6 +91,11 @@ class ResourceManager(object):
         data = resources.read(path)
         if data is None:
             # Expected constantly: every .mng request probes for .rle first.
+            # An event stream is different -- one that goes missing costs an
+            # animation its sound effects, silently, so say so once.
+            if key.endswith(".evt"):
+                _stub.LOG.record("call", "yagares.ResourceManager.Load",
+                                 "(%r) MISSING event stream" % str(path))
             self._cache[key] = 0
             return 0
 
