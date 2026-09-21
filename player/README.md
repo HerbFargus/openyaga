@@ -3,8 +3,9 @@
 A standalone player for the Humongous/Atari Yaga games, built around the game's
 *own* Python scripts rather than a reimplementation of its logic.
 
-**Status: step 2 — the game's own boot script runs against tracing stubs.
-Nothing renders yet.**
+**Status: Pajama Sam 4 plays start to finish** (v0.1), on Windows and Linux,
+with SDL2 window scaling, saves interchangeable with the original, and
+exact record/replay.
 
 ## How it works
 
@@ -17,12 +18,12 @@ underneath it. So this project:
 
 1. reads the scripts out of the executable **the user already owns**,
 2. recovers them as source on the user's machine,
-3. and (not yet built) provides the eleven `yaga*` modules the scripts import,
-   backed by SDL and the sprite decoders in [`../tools`](../tools).
+3. and provides the eleven `yaga*` modules the scripts import (`yagashim/`),
+   backed by SDL.
 
-The API surface to implement is 56 module-level names, 6 subclassable engine
-classes, and roughly 100–120 methods. See [../FORMATS.md](../FORMATS.md) for the
-data formats.
+[../ENGINE_API.md](../ENGINE_API.md) lists that interface as the game uses it,
+with the rules behind it; [../FORMATS.md](../FORMATS.md) covers the data
+formats.
 
 ## What ships and what doesn't
 
