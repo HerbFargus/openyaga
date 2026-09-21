@@ -210,16 +210,17 @@ class EventManager(_stub.Stub):
     def _inject_test_click(self):
         """Post a synthetic move-and-click, so input can be exercised without
         a person at the keyboard.  Driven by run_game.py --click."""
-        if not _stub.CLICK_AT or self.frames != _stub.CLICK_FRAME:
-            return
-        x, y = _stub.CLICK_AT
-        _stub.LOG.record("call", "test.click", "(%d, %d)" % (x, y))
-        pygame.event.post(pygame.event.Event(
-            pygame.MOUSEMOTION, pos=(x, y), rel=(0, 0), buttons=(0, 0, 0)))
-        pygame.event.post(pygame.event.Event(
-            pygame.MOUSEBUTTONDOWN, pos=(x, y), button=1))
-        pygame.event.post(pygame.event.Event(
-            pygame.MOUSEBUTTONUP, pos=(x, y), button=1))
+        for frame, x, y in _stub.CLICKS:
+            if frame != self.frames:
+                continue
+            _stub.LOG.record("call", "test.click", "frame %d at (%d, %d)"
+                             % (frame, x, y))
+            pygame.event.post(pygame.event.Event(
+                pygame.MOUSEMOTION, pos=(x, y), rel=(0, 0), buttons=(0, 0, 0)))
+            pygame.event.post(pygame.event.Event(
+                pygame.MOUSEBUTTONDOWN, pos=(x, y), button=1))
+            pygame.event.post(pygame.event.Event(
+                pygame.MOUSEBUTTONUP, pos=(x, y), button=1))
 
     def _pump_input(self):
         """Translate pygame input into the events the game expects.

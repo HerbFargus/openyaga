@@ -67,8 +67,7 @@ LOG = TraceLog()
 # Set by run_game.py before the game starts: headless checking options.
 FRAME_LIMIT = 0
 SCREENSHOT = None
-CLICK_AT = None      # (x, y) to click, for headless testing
-CLICK_FRAME = 5
+CLICKS = []          # [(frame, x, y)] to inject, for headless testing
 
 _MAX_REPR = 40
 
