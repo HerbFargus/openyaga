@@ -9,3 +9,6 @@ trace.log
 
 shot_*.png
 first_frame.png
+
+# Screenshots are frames of the game artwork. Never track them.
+*.png
