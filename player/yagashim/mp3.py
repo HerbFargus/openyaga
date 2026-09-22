@@ -31,6 +31,10 @@ import ffmpeg
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CACHE = os.path.join(os.path.dirname(HERE), "cache", "audio")
+# run_game.py --voice-pack: a folder of replacement lines, laid out like the
+# cache (talkies/sam/pj4pc_sam_00055.wav).  A line found there plays instead
+# of the game's own; every other line plays as shipped.
+VOICE_PACK = None
 
 
 def cache_path(path, root=None, extension=".wav"):
@@ -42,6 +46,17 @@ def cache_path(path, root=None, extension=".wav"):
     clean = str(path).replace("\\", "/").lstrip("/")
     stem, _ext = os.path.splitext(clean)
     return os.path.join(root, *(stem.split("/"))) + extension
+
+
+def voice_pack_line(path):
+    """The voice pack's WAV for this game path, or None."""
+    if not VOICE_PACK:
+        return None
+    for candidate in (path, str(path).lower()):
+        target = cache_path(candidate, VOICE_PACK)
+        if os.path.isfile(target):
+            return target
+    return None
 
 
 def ensure_directory(target):

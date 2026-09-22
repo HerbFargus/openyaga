@@ -331,6 +331,15 @@ def rotate(path, keep=3):
 _pending = {}
 
 
+def voice_pack_name(path):
+    """A voice pack as a recording names it: its folder name, so a session
+    recorded on one machine replays on another where the pack sits
+    elsewhere."""
+    if not path:
+        return None
+    return os.path.basename(os.path.normpath(path))
+
+
 def main():
     import argparse
     ap = argparse.ArgumentParser()
@@ -354,6 +363,10 @@ def main():
                     help="run another Yaga game, set up with "
                          "setup_game.py --game TAG: it gets its own "
                          "gamecache-TAG, rundir-TAG and cache-TAG")
+    ap.add_argument("--voice-pack", metavar="DIR",
+                    help="play replacement dialogue from DIR, laid out like "
+                         "the game's talkies (DIR/talkies/sam/"
+                         "pj4pc_sam_00055.wav); lines it lacks play as shipped")
     rec = ap.add_argument_group(
         "record and replay", "a replay makes the same engine calls as the "
         "session it recorded, so two traces can be compared call by call")
@@ -469,6 +482,12 @@ def main():
             sys.exit("%s was recorded with %s; replay it with the same"
                      % (args.replay, ("--game " + started["game"]) if started.get("game")
                         else "no --game"))
+        # Replacement lines run for their own lengths, and the script waits
+        # on them, so a replay needs the same voice pack as its recording.
+        if started.get("voice_pack") != voice_pack_name(args.voice_pack):
+            sys.exit("%s was recorded with %s; replay it with the same"
+                     % (args.replay, ("--voice-pack " + started["voice_pack"])
+                        if started.get("voice_pack") else "no --voice-pack"))
         args.scene = started.get("scene")
         args.skip_video = started.get("skip_video", False)
         args.subtitles = started.get("subtitles", False)
@@ -477,7 +496,8 @@ def main():
         replay.start_recording(os.path.abspath(args.record), scene=args.scene,
                                skip_video=bool(args.skip_video),
                                subtitles=bool(args.subtitles),
-                               frames=args.frames or 0, game=args.game)
+                               frames=args.frames or 0, game=args.game,
+                               voice_pack=voice_pack_name(args.voice_pack))
     _stub.FRAME_LIMIT = args.frames
     _stub.SCREENSHOT = os.path.abspath(args.screenshot) if args.screenshot else None
     _stub.SKIP_VIDEO = args.skip_video
@@ -515,6 +535,11 @@ def main():
         import mp3, bink
         mp3.CACHE = os.path.join(HERE, "cache" + suffix, "audio")
         bink.CACHE = os.path.join(HERE, "cache" + suffix, "movies")
+    if args.voice_pack:
+        import mp3
+        if not os.path.isdir(args.voice_pack):
+            sys.exit("--voice-pack: no folder %s" % args.voice_pack)
+        mp3.VOICE_PACK = os.path.abspath(args.voice_pack)
     if not os.path.isdir(rundir):
         os.makedirs(rundir)
     os.chdir(rundir)

@@ -252,8 +252,18 @@ Useful while developing:
 | `--key NAME@FRAME` | press a key, e.g. `escape@40`, `space@90`, `k@60` |
 | `--subtitles` | show the dialogue text; the game defaults it off |
 | `--debug-hit` | log every sprite hit test and which bound rejected it |
+| `--voice-pack DIR` | play replacement dialogue from `DIR` (see below) |
 
 Everything the game asks of the engine is written to `trace.log`.
+
+*Voice packs.* `--voice-pack DIR` swaps in your own recordings of any
+spoken lines. `DIR` mirrors the game's talkie paths as WAV files --
+`DIR/talkies/sam/pj4pc_sam_00055.wav` replaces `talkies/sam/pj4pc_sam_00055.mp3`
+-- and any line the pack lacks plays as shipped. Lip-sync and subtitles
+still follow the game's own timing data, so a replacement should run about
+as long as the line it replaces. A recording names the voice pack it was
+made with, and its replay needs the same one. No voice pack ships with
+openyaga, and none belongs in this repository.
 
 ## Recording and replaying: the trace as an oracle
 

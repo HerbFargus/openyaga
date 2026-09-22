@@ -120,8 +120,8 @@ class ISound(object):
             return
         if self.is_music:
             return
-        source = None
-        if self.is_mp3:
+        source = mp3.voice_pack_line(self.path)
+        if source is None and self.is_mp3:
             init = pygame.mixer.get_init()
             source = mp3.decode(self.path, data,
                                 (init[0], init[2]) if init else None)
