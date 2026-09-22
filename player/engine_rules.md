@@ -70,7 +70,9 @@ A frame is a stack of named layers, each with a 32-bit phoneme mask.
     layer by name (eye directions, the bishop's crook). The switch belongs to
     the sprite and survives animation changes; layers default to on;
   - **blinks**: `BLINK1` and `BLINK2` are mask 0 and no script touches them.
-    The engine blinks characters itself; the rate is not in the data;
+    The engine blinks characters itself, unless the sprite's `blinkEnabled`
+    is false -- Putt-Putt turns it off while a character talks. The rate is
+    not in the data;
   - **lipsync silence**: a mask of 0 in a lipsync stream means "no phoneme"
     and draws the rest pose (`ROOT`), not nothing.
 - See `FORMATS.md`, "Lipsync: the phoneme mask".

@@ -678,6 +678,12 @@ class ISprite(_stub.Stub):
         open.  Its timing is not in the data anywhere, so the rate here is a
         reconstruction rather than a recovered constant.
         """
+        # The engine's own switch for it, which Putt-Putt uses: a character
+        # stops blinking while it talks (CharPlayEvent sets blinkEnabled
+        # false, DoneTalkingCallback and ResetMouth set it back).  Pajama Sam
+        # 4 never touches it, so it defaults to on.
+        if not object.__getattribute__(self, "_yaga_attrs").get("blinkEnabled", 1):
+            return None
         stages = (("BLINK1", 0.07), ("BLINK2", 0.09), ("BLINK1", 0.07))
         now = time.time()
         start = object.__getattribute__(self, "_blink_at")
