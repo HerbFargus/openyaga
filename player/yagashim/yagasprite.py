@@ -540,6 +540,7 @@ class ISprite(_stub.Stub):
         if not self._playing:
             self._playing = True
             self._started = time.time()
+            object.__setattr__(self, "_loops_seen", 0)
             _stub.LOG.record("call", "%s.Run" % self._yaga_name,
                              "(%s)" % _stub._brief(scene))
             import yagascene
@@ -565,6 +566,7 @@ class ISprite(_stub.Stub):
         if self._anim_id != id(self.anim):
             self._anim_id = id(self.anim)
             self._started = time.time()
+            object.__setattr__(self, "_loops_seen", 0)
         fps = getattr(self.anim, "framesPerSecond", 10) or 10
         elapsed = time.time() - (self._started or time.time())
         step = int(elapsed * fps)
@@ -582,6 +584,23 @@ class ISprite(_stub.Stub):
                                  "(%s)" % getattr(self.anim, "locator", "?"))
                 self._fire(yagascene.SceneEvents.SCENE_STOP)
                 return
+        # Each time the animation starts over, SCENE_RUN again -- not only
+        # when it was first run.  The scripts poll on it: a character looping
+        # a talking animation checks on every SCENE_RUN whether the line has
+        # ended, and moves on when it has --
+        #
+        #     if self.currentAnimation == self.myAnims['intro'][2]:
+        #         if self.doneTalking:
+        #             ...next step...
+        #
+        # (Putt-Putt's feed supply; fired once, the check ran mid-line and the
+        # scene waited for ever.)  Pajama Sam 4's inventory preview counts six
+        # of them before it closes, which only works if they repeat.
+        wraps = step // frame_count
+        if wraps > object.__getattribute__(self, "__dict__").get("_loops_seen", 0):
+            object.__setattr__(self, "_loops_seen", wraps)
+            import yagascene
+            self._fire(yagascene.SceneEvents.SCENE_RUN)
         self.currentFrame = step % frame_count if frame_count else 0
 
     def SetLayerFlag(self, name=None, flag=None, on=1, *a, **kw):

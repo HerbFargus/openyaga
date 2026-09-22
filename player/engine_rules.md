@@ -40,6 +40,12 @@ wrong without it; the shim file that implements it has the details.
   and cutscenes advance on it. A one-frame pose still finishes.
   Characters guard against their own `Stop()` with `ignoreCallback`, which
   only works if the stop is delivered synchronously.
+- **`SCENE_RUN` repeats.** It is sent when an animation starts *and every
+  time a looping animation starts over*. Scripts poll on it: a character
+  looping a talking animation checks `doneTalking` on each `SCENE_RUN` and
+  moves on when the line has ended, and Pajama Sam 4's inventory preview
+  closes after six of them. Sent only once, Putt-Putt's first conversation
+  waits for ever (`yagasprite.ISprite._advance`).
 - **`position.z` is the draw order**, and a sprite's position is a value:
   assigning a Point copies it (`yagascene.copy_point`).
 - **`renderRect` is known before the first draw**: the save screen centres

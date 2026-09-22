@@ -74,8 +74,9 @@ See [player/README.md](player/README.md) for the design.
 ## What doesn't work yet
 
 - **Putt-Putt: Pep's Birthday Surprise boots**, with no game-specific code:
-  setup recovers all 182 modules, and it plays the logos and intro movie and
-  reaches its first room, the garage. It has not been played further yet.
+  setup recovers all 182 modules, and it plays the logos and intro movie,
+  its first rooms and its first conversation (the feed supply). It is being
+  played through now.
   Set it up as a second game with `setup_game.py --game pbs` and run it with
   `run_game.py --game pbs`.
 - **The Backyard titles are untested.**

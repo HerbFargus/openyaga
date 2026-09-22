@@ -465,6 +465,10 @@ def main():
         sys.exit("--record and --replay: pick one")
     if args.replay:
         started = replay.start_replay(os.path.abspath(args.replay))
+        if started.get("game") != args.game:
+            sys.exit("%s was recorded with %s; replay it with the same"
+                     % (args.replay, ("--game " + started["game"]) if started.get("game")
+                        else "no --game"))
         args.scene = started.get("scene")
         args.skip_video = started.get("skip_video", False)
         args.subtitles = started.get("subtitles", False)
@@ -473,7 +477,7 @@ def main():
         replay.start_recording(os.path.abspath(args.record), scene=args.scene,
                                skip_video=bool(args.skip_video),
                                subtitles=bool(args.subtitles),
-                               frames=args.frames or 0)
+                               frames=args.frames or 0, game=args.game)
     _stub.FRAME_LIMIT = args.frames
     _stub.SCREENSHOT = os.path.abspath(args.screenshot) if args.screenshot else None
     _stub.SKIP_VIDEO = args.skip_video
