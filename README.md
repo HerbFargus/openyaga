@@ -10,7 +10,8 @@ titles shipped on it:
 - Putt-Putt: Pep's Birthday Surprise (2003)
 - Backyard Basketball 2004, Backyard Football 2004, Backyard Hockey
 
-Development so far has been against Pajama Sam 4.
+Two of them play start to finish on openyaga: Pajama Sam 4 and Putt-Putt:
+Pep's Birthday Surprise.
 
 ![Pajama Sam 4 running under openyaga](docs/screenshot.png)
 
