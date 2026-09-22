@@ -80,6 +80,14 @@ class Layer(object):
 
     image = property(_get_image, _set_image)
 
+    @property
+    def pos(self):
+        """Where the layer sits, as the engine's Point: the same x, y the
+        renderer draws it at (relative to the sprite's position).  Putt-Putt's
+        image transitions place slices of a layer with it."""
+        import yagascene
+        return yagascene.Point(self.x, self.y, 0)
+
     def __init__(self, name="", x=0, y=0, w=0, h=0, mask=0, rgba=None, note=""):
         self._surface = None
         self._replacement = None
@@ -95,6 +103,15 @@ class Frame(object):
 
     def __init__(self):
         self.layers = []
+
+    @property
+    def pos(self):
+        """The frame's own offset.  Zero: layer positions are already where
+        they draw relative to the sprite, and the one caller --
+        imageTransitions, `sprPos - frame.pos + layer.pos` -- then lands a
+        slice exactly where the renderer draws the layer."""
+        import yagascene
+        return yagascene.Point(0, 0, 0)
 
 
 class Anim(object):
