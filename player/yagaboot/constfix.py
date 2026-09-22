@@ -118,3 +118,121 @@ def repair(source: str, code) -> tuple:
         return match.group(0)
 
     return _INT_LIST.sub(substitute, source), fixes
+
+
+# -- lists the bytecode can vouch for -----------------------------------------
+#
+# The rule above needs a run of four or more indices that all resolve to
+# strings.  Putt-Putt has the same fault in a shape that rule cannot see: a
+# table of rows mixing names with constants, some of them ints --
+#
+#     c_visorButtons = [[None, CVisorButtons, 1, 2, 3, 4], ...]
+#
+# where the bytecode loads 'interface/visor/bg_visor.mng', 5000,
+# 'interface_visor', 0 -- constants 1 to 4.  Here the bytecode decides, not a
+# guess: every list the code object builds is rebuilt from its LOAD_CONST /
+# LOAD_NAME / BUILD_LIST sequence, and a source list is replaced only if it
+# has the same length, the same names in the same places, and at each number
+# the *index* of the constant the bytecode loads there -- with at least one
+# index that differs from its value, or there is nothing to fix.
+
+_FLAT_LIST = re.compile(r"\[([^\[\]]*)\]")
+_ELEMENT = re.compile(r"^(?:-?\d+|[A-Za-z_]\w*)$")
+
+
+def _built_lists(code):
+    """Every list a code object builds from plain loads: a list of items,
+    each ('c', index, value) or ('n', name)."""
+    from .lostelse import _instructions
+    lists, stack = [], []
+    for ins in _instructions(code):
+        op = ins.opname
+        if op == "LOAD_CONST":
+            stack.append(("c", ins.arg, ins.argval))
+        elif op in ("LOAD_NAME", "LOAD_GLOBAL", "LOAD_FAST"):
+            stack.append(("n", ins.argval))
+        elif op == "BUILD_LIST" and ins.arg is not None and len(stack) >= ins.arg:
+            items = stack[len(stack) - ins.arg:] if ins.arg else []
+            del stack[len(stack) - ins.arg:]
+            if all(item[0] in ("c", "n") for item in items):
+                lists.append(items)
+            stack.append(("l",))
+        elif op == "SET_LINENO":
+            continue
+        else:
+            stack = []
+    return lists
+
+
+def _matches(elements, items):
+    """The corrected elements if the source list is this bytecode list with
+    constant indices for constants, else None."""
+    if len(elements) != len(items):
+        return None
+    out, differs = [], False
+    for text, item in zip(elements, items):
+        if item[0] == "n":
+            if text != item[1]:
+                return None
+            out.append(text)
+            continue
+        _kind, index, value = item
+        if text == "None" and value is None:
+            out.append(text)
+            continue
+        if not re.match(r"^-?\d+$", text) or int(text) != index:
+            return None
+        if isinstance(value, (bytes, bytearray)):
+            value = bytes(value).decode("latin-1")
+        if not isinstance(value, (str, int, float)) or isinstance(value, bool):
+            return None
+        literal = repr(value)
+        differs = differs or literal != text
+        out.append(literal)
+    return out if differs else None
+
+
+def repair_tables(source: str, code) -> tuple:
+    """Returns (source, fixes) for index-filled lists the bytecode proves."""
+    by_path = _code_by_path(code)
+    built = {}
+    fixes = []
+
+    def lists_for(path):
+        if path not in built:
+            target = by_path.get(path)
+            built[path] = _built_lists(target) if target is not None else []
+        return built[path]
+
+    marks = _paths_by_offset(source)
+
+    def substitute(match):
+        elements = [e.strip() for e in match.group(1).split(",") if e.strip()]
+        if not elements or not all(_ELEMENT.match(e) for e in elements):
+            return match.group(0)
+        if not any(re.match(r"^-?\d+$", e) for e in elements):
+            return match.group(0)
+        path = _path_at(marks, match.start())
+        candidates = []
+        while True:
+            candidates.append(path)
+            if not path:
+                break
+            path = path.rsplit("/", 1)[0]
+        for candidate in candidates:
+            found = set()
+            for items in lists_for(candidate):
+                fixed = _matches(elements, items)
+                if fixed:
+                    found.add(tuple(fixed))
+            if len(found) == 1:
+                fixed = list(found.pop())
+                fixes.append("%s [%s] -> [%s]" % (candidate or "<module>",
+                                                  ", ".join(elements)[:40],
+                                                  ", ".join(fixed)[:60]))
+                return "[" + ", ".join(fixed) + "]"
+            if found:
+                return match.group(0)     # ambiguous: leave it
+        return match.group(0)
+
+    return _FLAT_LIST.sub(substitute, source), fixes

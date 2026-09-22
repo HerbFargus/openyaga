@@ -209,6 +209,8 @@ def apply_patches(path, module, pyc_path=None, game_id=None):
             code = load_module(pyc_path)[3]
             text, fixes = constfix.repair(text, code)
             applied_general = ["%s: const-index list %s" % (module, f) for f in fixes]
+            text, table_fixes = constfix.repair_tables(text, code)
+            applied_general += ["%s: const-index table %s" % (module, f) for f in table_fixes]
             text, else_fixes = elsefix.repair(text, code)
             applied_general += ["%s: %s" % (module, f) for f in else_fixes]
             text, lost_fixes, lost_problems = lostelse.repair(text, code)
