@@ -95,6 +95,16 @@ class Movie(object):
 
     def _audio(self):
         """Decode the soundtrack once and keep it; returns a Sound or None."""
+        # A voice pack can replace a movie's whole soundtrack
+        # (DIR/movies/pj_intro.wav): the picture still comes from the Bink
+        # file and still runs for as long as its header says.
+        replacement = mp3.voice_pack_line(self.path)
+        if replacement:
+            try:
+                return pygame.mixer.Sound(replacement)
+            except Exception, exc:
+                _stub.LOG.record("call", "yagasprite.bink",
+                                 "(%s) voice pack soundtrack failed: %s" % (self.path, exc))
         target = mp3.cache_path(self.path, root=CACHE)
         source = self._source_file()
         if source is None:

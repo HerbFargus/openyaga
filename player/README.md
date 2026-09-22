@@ -259,7 +259,9 @@ Everything the game asks of the engine is written to `trace.log`.
 *Voice packs.* `--voice-pack DIR` swaps in your own recordings of any
 spoken lines. `DIR` mirrors the game's talkie paths as WAV files --
 `DIR/talkies/sam/pj4pc_sam_00055.wav` replaces `talkies/sam/pj4pc_sam_00055.mp3`
--- and any line the pack lacks plays as shipped. Lip-sync and subtitles
+-- and any line the pack lacks plays as shipped. A movie's whole soundtrack
+can be replaced the same way (`DIR/movies/pj_intro.wav`); its picture still
+comes from the Bink file and keeps its own timing. Lip-sync and subtitles
 still follow the game's own timing data, so a replacement should run about
 as long as the line it replaces. A recording names the voice pack it was
 made with, and its replay needs the same one. No voice pack ships with
