@@ -83,6 +83,11 @@ def draw(dest, source, opacity=1.0, rcDst=None, rcSrc=None, exact=False):
     if area.width <= 0 or area.height <= 0:
         return
     target = _rect(rcDst, area.width, area.height)
+    if target.width <= 0 or target.height <= 0:
+        # Nothing to draw into.  Not "draw it unscaled": Putt-Putt's
+        # billboard flip shrinks its strips to zero height, and on that last
+        # frame the whole old picture flashed back at full size.
+        return
     piece = src.subsurface(area)
     if (target.width, target.height) != (area.width, area.height) \
             and target.width > 0 and target.height > 0:
