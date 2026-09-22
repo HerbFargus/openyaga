@@ -196,12 +196,17 @@ class IImageString(object):
     def __getattr__(self, name):
         if name.startswith("__"):
             raise AttributeError(name)
+        if name == "position":
+            # A copy on the way out too: a Point is a value (yagascene).
+            import yagascene
+            return yagascene.copy_point(object.__getattribute__(self, "_position"))
         return _stub.Stub("yagafont.IImageString.%s" % name)
 
     def __setattr__(self, name, value):
         if name == "position":
             import yagascene
             value = yagascene.copy_point(value)
+            name = "_position"
         object.__setattr__(self, name, value)
         # Any of these changes the layout, so throw it away and do it again
         # on the next draw rather than trying to patch it.

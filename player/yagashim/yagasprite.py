@@ -349,6 +349,23 @@ class ISprite(_stub.Stub):
     def __hash__(self):
         return _seq(self)
 
+    def __getattr__(self, name):
+        # Reading a position gives a copy, as assigning one does (see
+        # yagascene.copy_point): a Point is a value in the engine.  Putt-Putt's
+        # save screen reads a slot's position, adjusts it and hands it to the
+        # thumbnail --
+        #     newPosition = theSprite.position
+        #     newPosition.y = theSprite.renderRect.y + ...
+        # -- and with the live object that moved the slot itself, onto the
+        # slot below, which then took its clicks: Load did nothing.  No script
+        # writes through a read-back position expecting it to stick.
+        if name == "position":
+            attrs = self._yaga_attrs
+            if "position" in attrs:
+                import yagascene
+                return yagascene.copy_point(attrs["position"])
+        return _stub.Stub.__getattr__(self, name)
+
     def __init__(self, name="yagasprite.ISprite"):
         object.__setattr__(self, "_seq", next(_sequence))
         _stub.Stub.__init__(self, name)
