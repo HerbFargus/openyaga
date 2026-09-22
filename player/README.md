@@ -3,7 +3,8 @@
 A standalone player for the Humongous/Atari Yaga games, built around the game's
 *own* Python scripts rather than a reimplementation of its logic.
 
-**Status: Pajama Sam 4 plays start to finish** (v0.1), on Windows and Linux,
+**Status: Pajama Sam 4 and Putt-Putt: Pep's Birthday Surprise both play start
+to finish**, on Windows and Linux,
 with SDL2 window scaling, saves interchangeable with the original, and
 exact record/replay.
 

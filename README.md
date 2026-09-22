@@ -73,12 +73,12 @@ See [player/README.md](player/README.md) for the design.
 
 ## What doesn't work yet
 
-- **Putt-Putt: Pep's Birthday Surprise boots**, with no game-specific code:
-  setup recovers all 182 modules, and it plays the logos and intro movie,
-  its first rooms and its first conversation (the feed supply). It is being
-  played through now.
-  Set it up as a second game with `setup_game.py --game pbs` and run it with
-  `run_game.py --game pbs`.
+- **Putt-Putt: Pep's Birthday Surprise plays start to finish too**, with no
+  game-specific code: setup recovers all 182 modules, and the engine fixes
+  it needed -- repeating SCENE_RUN, frame positions, position copies,
+  clamped frames, hit tests on hidden sprites, the software cursor -- are
+  engine rules both games follow. Set it up as a second game with
+  `setup_game.py --game pbs` and run it with `run_game.py --game pbs`.
 - **The Backyard titles are untested.**
 - **SDL2 is new.** This branch moves the player to SDL2 (pygame 2), for a
   resizable window, fullscreen and integer scaling; v0.1 is the SDL 1.2
