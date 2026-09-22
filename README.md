@@ -31,8 +31,8 @@ python tools/yaga_extract.py sprites --pattern "bedroom/*" --formats frames,shee
 
 **`ENGINE_API.md` — the engine interface, for anyone reimplementing it.**
 
-Every engine name the game's scripts use -- module by module, class by class,
-with how often the scripts and a full playthrough touch each -- plus the rules
+Every engine name the games' scripts use -- module by module, class by class,
+per game, with how often each game's scripts and playthroughs touch it -- plus the rules
 the names do not tell you: how the loop, animation events, layers, input and
 sound actually have to behave. Generated from the scripts, the shim and play
 traces by `player/engine_api.py`. To check another implementation against
@@ -48,7 +48,7 @@ streams, and the quirks in the shipped data that break naive decoders.
 and the dialogue script — which carries the full subtitle text for all 1,212
 spoken lines.
 
-**`player/` — a standalone player. Pajama Sam 4 plays start to finish.**
+**`player/` — a standalone player. Two games play start to finish.**
 
 Yaga is a C++ engine driving **Python 2.2** game scripts, which are bundled
 inside the game executable. So the game's *logic* needs no reimplementation —
@@ -65,24 +65,33 @@ effects: the `.evb` event streams are read in [FORMATS.md](FORMATS.md), which
 linyaga lists as its one missing feature. Subtitles work too (`--subtitles`;
 the game defaults them off), drawn with the game's own bitmap fonts.
 
+**Putt-Putt: Pep's Birthday Surprise plays start to finish too**, with no
+game-specific code. Setup recovers all 182 of its modules, and everything it
+needed went into the shared engine as rules both games follow: repeating
+`SCENE_RUN`, frame positions, position copies, clamped frames, hit tests on
+hidden sprites, the software cursor. Set it up as a second game with
+`setup_game.py --game pbs` and run it with `run_game.py --game pbs`.
+
 Setup also repairs the decompiler's mistakes in the recovered scripts, checked
-against the original bytecode, and fixes a few bugs in the original game that
-could freeze or crash it (see `player/yagaboot/patches.py`).
+against the original bytecode, and fixes a few bugs in the original games that
+could freeze or crash them (see `player/yagaboot/patches.py`).
+
+**The window** is SDL2 (pygame 2): resizable, with borderless fullscreen
+(F11), integer scaling (F10) and smooth or sharp filtering (F12), and
+DPI-aware on Windows. **Linux** works too -- `player/setup.sh` sets up
+everything without `sudo`, tested on a stock Ubuntu -- and **record and
+replay** (`--record`, `--replay`) reproduce a session's engine calls exactly,
+even from Windows to Linux.
 
 See [player/README.md](player/README.md) for the design.
 
 ## What doesn't work yet
 
-- **Putt-Putt: Pep's Birthday Surprise plays start to finish too**, with no
-  game-specific code: setup recovers all 182 modules, and the engine fixes
-  it needed -- repeating SCENE_RUN, frame positions, position copies,
-  clamped frames, hit tests on hidden sprites, the software cursor -- are
-  engine rules both games follow. Set it up as a second game with
-  `setup_game.py --game pbs` and run it with `run_game.py --game pbs`.
-- **The Backyard titles are untested.**
-- **SDL2 is new.** This branch moves the player to SDL2 (pygame 2), for a
-  resizable window, fullscreen and integer scaling; v0.1 is the SDL 1.2
-  build.
+- **The Backyard titles are untested.** Backyard Basketball, Football and
+  Hockey 2004 may need engine behaviour neither Pajama Sam 4 nor Putt-Putt
+  uses.
+- **macOS is untested.** `player/setup.sh` is written for it (Intel builds,
+  under Rosetta on Apple Silicon), but it has only been run on Linux.
 
 ## You need your own copy of the game
 
