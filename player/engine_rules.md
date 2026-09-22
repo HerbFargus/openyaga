@@ -32,9 +32,10 @@ wrong without it; the shim file that implements it has the details.
 
 ### Sprites and animation
 
-- **Sprites do not animate until `Run()`**, and the game calls `Run()` every
-  frame, so it must be idempotent -- restarting the clock pins every
-  animation on frame 0.
+- **Sprites do not animate until `Run()`**, and `Run()` must be idempotent:
+  the game can call it again on a sprite that is already playing, and
+  restarting the clock there pins the animation on frame 0. (The call made
+  every frame is the sprite manager's `Seek(delta)`, on every sprite.)
 - **`SCENE_STOP` is load-bearing.** When an animation with a loop count
   finishes, the sprite's event sinks get `SCENE_STOP`; room changes, walking
   and cutscenes advance on it. A one-frame pose still finishes.

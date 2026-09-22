@@ -42,9 +42,10 @@ wrong without it; the shim file that implements it has the details.
 
 ### Sprites and animation
 
-- **Sprites do not animate until `Run()`**, and the game calls `Run()` every
-  frame, so it must be idempotent -- restarting the clock pins every
-  animation on frame 0.
+- **Sprites do not animate until `Run()`**, and `Run()` must be idempotent:
+  the game can call it again on a sprite that is already playing, and
+  restarting the clock there pins the animation on frame 0. (The call made
+  every frame is the sprite manager's `Seek(delta)`, on every sprite.)
 - **`SCENE_STOP` is load-bearing.** When an animation with a loop count
   finishes, the sprite's event sinks get `SCENE_STOP`; room changes, walking
   and cutscenes advance on it. A one-frame pose still finishes.
@@ -57,7 +58,10 @@ wrong without it; the shim file that implements it has the details.
   closes after six of them. Sent only once, Putt-Putt's first conversation
   waits for ever (`yagasprite.ISprite._advance`).
 - **`position.z` is the draw order**, and a sprite's position is a value:
-  assigning a Point copies it (`yagascene.copy_point`).
+  assigning a Point copies it, and so does *reading* one. Scripts read a
+  position, adjust the copy and hand it on; a live reference moves the
+  original sprite instead -- in Putt-Putt, a save slot onto the slot below,
+  which then took its clicks (`yagascene.copy_point`, `ISprite.__getattr__`).
 - **`renderRect` is known before the first draw**: the save screen centres
   labels on it the moment a sprite is made (`yagasprite._estimate_rect`).
 
