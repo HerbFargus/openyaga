@@ -485,7 +485,7 @@ class ISprite(_stub.Stub):
             return
         try:
             frame = frames[min(int(self.currentFrame or 0), len(frames) - 1)]
-            ox, oy = int(self.position.x or 0), int(self.position.y or 0)
+            ox, oy = self._origin()
         except (TypeError, ValueError, AttributeError):
             return
         boxes = []
@@ -721,6 +721,26 @@ class ISprite(_stub.Stub):
                              getattr(self.anim, "locator", "?"), x, y))
         return 0
 
+    def _origin(self):
+        """Where the sprite's layer coordinates start on screen.
+
+        Normally its position: a layer draws at position + layer offset.
+        Cursor art is the exception.  All 78 of Putt-Putt's cursor pictures
+        (85 in Pajama Sam 4) are authored with the hotspot at the canvas
+        centre -- the arrow's tip at (320, 240), the east arrow at x 288 so
+        its point reaches 320 -- and the game puts the cursor sprite at the
+        mouse, in screen pixels.  So the engine draws cursor art relative to
+        the centre, and the tip lands on the pointer.  Only the software
+        cursor ever takes this path (Putt-Putt's cake decorator turns it on);
+        drawn as ordinary art it sat 320 pixels right and 240 down, mostly
+        off screen.
+        """
+        ox, oy = int(self.position.x or 0), int(self.position.y or 0)
+        locator = str(getattr(getattr(self, "anim", None), "locator", "") or "")
+        if "interface/cursors/" in locator.replace("\\", "/").lower():
+            ox, oy = ox - 320, oy - 240
+        return ox, oy
+
     def _layers_at_rest(self):
         """The layers the current frame would draw, and where, for a sprite
         that has not been drawn.
@@ -741,7 +761,7 @@ class ISprite(_stub.Stub):
             wanted = PHONEME_REST
         index = int(self.currentFrame or 0) % len(inner.frames)
         flags = object.__getattribute__(self, "_layer_flags")
-        ox, oy = int(self.position.x or 0), int(self.position.y or 0)
+        ox, oy = self._origin()
         out = []
         for layer in inner.frames[index].layers:
             if layer.rgba is None or not layer.w or not layer.h:
@@ -779,7 +799,7 @@ class ISprite(_stub.Stub):
         index = int(self.currentFrame or 0) % len(inner.frames)
         flags = object.__getattribute__(self, "_layer_flags")
         blinking = self._blink()
-        ox, oy = int(self.position.x or 0), int(self.position.y or 0)
+        ox, oy = self._origin()
         self._drawn = []
         drawn = 0
         for layer in inner.frames[index].layers:

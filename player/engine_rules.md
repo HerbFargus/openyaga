@@ -115,9 +115,14 @@ A frame is a stack of named layers, each with a 32-bit phoneme mask.
 
 ### Cursor, movies, saves
 
-- The game always takes the hardware-cursor path: `LoadCursorFile(path, id)`
-  with a `.cur`, then `SetCursorByID(id)`; `cursorVisible` hides the pointer
-  for cutscenes (`yagagraphics.RenderTarget`).
+- The game normally takes the hardware-cursor path: `LoadCursorFile(path,
+  id)` with a `.cur`, then `SetCursorByID(id)`; `cursorVisible` hides the
+  pointer for cutscenes (`yagagraphics.RenderTarget`).
+- **Software cursors draw centre-relative.** Some screens (Putt-Putt's cake
+  decorator) turn the hardware cursor off and draw the cursor sprite,
+  placed at the mouse in screen pixels. Every cursor picture is authored
+  with its hotspot at the canvas centre (320, 240), so cursor art is drawn
+  offset by (-320, -240) (`ISprite._origin`).
 - Movies (`.da2`, Bink) run for exactly as long as their header says;
   `isPlaying` is timed by that, whether or not frames keep up
   (`yagasprite.IVideoElement`).
