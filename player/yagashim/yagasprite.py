@@ -349,6 +349,32 @@ class ISprite(_stub.Stub):
     def __hash__(self):
         return _seq(self)
 
+    def _clamp_frame(self, value):
+        """currentFrame stays within the animation, as the engine keeps it.
+
+        Scripts that animate a sprite by hand step past the end and test for
+        the last frame exactly.  Putt-Putt's bunnies do both in one tick --
+
+            self.GetSprite().currentFrame += 1       # Tick
+            ...
+            if myFrameCount - 1 == self.GetSprite().currentFrame:   # AnimateImage
+                self.GetSprite().currentFrame = 0
+                self.SetEndAnimFlag()
+            else:
+                self.GetSprite().currentFrame += 1
+
+        -- two steps at a time, so an unclamped frame ran straight past the
+        last one (to 586, for a hop of a few frames), the hop never ended, and
+        the bunnies never looked for the carrot.  Clamped, it lands on it."""
+        try:
+            frame = int(value)
+            count = int(self._yaga_attrs.get("frameCount") or 0)
+        except (TypeError, ValueError):
+            return value
+        if count > 0:
+            frame = max(0, min(count - 1, frame))
+        return frame
+
     def __getattr__(self, name):
         # Reading a position gives a copy, as assigning one does (see
         # yagascene.copy_point): a Point is a value in the engine.  Putt-Putt's
@@ -427,6 +453,8 @@ class ISprite(_stub.Stub):
         if name == "position":
             import yagascene
             value = yagascene.copy_point(value)
+        elif name == "currentFrame":
+            value = self._clamp_frame(value)
         _stub.Stub.__setattr__(self, name, value)
         if name == "anim":
             frames = getattr(value, "frames", None)
@@ -676,12 +704,13 @@ class ISprite(_stub.Stub):
         only where it is actually opaque, not anywhere in its bounding box.
         """
         x, y = getattr(collider, "x", None), getattr(collider, "y", None)
-        if x is None or y is None or not self._drawn:
+        placed = self._drawn or self._layers_at_rest()
+        if x is None or y is None or not placed:
             _stub.LOG.record("call", "yagasprite.Intersect",
                              "collider=%s x=%r y=%r drawn=%d -> reject"
-                             % (type(collider).__name__, x, y, len(self._drawn)))
+                             % (type(collider).__name__, x, y, len(placed or [])))
             return 0
-        for layer, ox, oy in self._drawn:
+        for layer, ox, oy in placed:
             lx, ly = int(x) - ox, int(y) - oy
             if 0 <= lx < layer.w and 0 <= ly < layer.h:
                 alpha = layer.rgba[(ly * layer.w + lx) * 4 + 3]
@@ -691,6 +720,39 @@ class ISprite(_stub.Stub):
                          "(%s) at (%s,%s) -> transparent" % (
                              getattr(self.anim, "locator", "?"), x, y))
         return 0
+
+    def _layers_at_rest(self):
+        """The layers the current frame would draw, and where, for a sprite
+        that has not been drawn.
+
+        Hit tests are against the picture, not against the screen: a sprite
+        the game never shows can still be collided with.  Putt-Putt's bunny
+        herding keeps its maze as exactly that -- a hidden mask the animals
+        test each hop against -- and testing only what had been drawn found
+        no walls at all, so bunnies hopped through fences and off the screen.
+        Same choice of layers as Render: mask, switched-off names, blinks."""
+        anim = getattr(self, "anim", None)
+        inner = getattr(anim, "anim", None)
+        if inner is None or not getattr(inner, "frames", None):
+            return []
+        try:
+            wanted = int(self.renderMask)
+        except (TypeError, ValueError):
+            wanted = PHONEME_REST
+        index = int(self.currentFrame or 0) % len(inner.frames)
+        flags = object.__getattribute__(self, "_layer_flags")
+        ox, oy = int(self.position.x or 0), int(self.position.y or 0)
+        out = []
+        for layer in inner.frames[index].layers:
+            if layer.rgba is None or not layer.w or not layer.h:
+                continue
+            if layer.mask and not (layer.mask & wanted):
+                continue
+            name = (layer.name or "").upper()
+            if name.startswith("BLINK") or not flags.get(name, 1):
+                continue
+            out.append((layer, ox + layer.x, oy + layer.y))
+        return out
 
     def Render(self, camera=None):
         """Blit the current frame's layers onto the render target.

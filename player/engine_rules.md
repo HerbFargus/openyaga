@@ -52,6 +52,12 @@ wrong without it; the shim file that implements it has the details.
   position, adjust the copy and hand it on; a live reference moves the
   original sprite instead -- in Putt-Putt, a save slot onto the slot below,
   which then took its clicks (`yagascene.copy_point`, `ISprite.__getattr__`).
+- **`currentFrame` stays within the animation.** Scripts that animate by
+  hand step past the end and test for the last frame exactly; unclamped,
+  Putt-Putt's bunnies never finished a hop (`ISprite._clamp_frame`).
+- **Hit tests are against the picture, drawn or not.** `Intersect` must work
+  on a sprite the game never shows: Putt-Putt's bunny maze is a hidden mask
+  (`ISprite._layers_at_rest`).
 - **`renderRect` is known before the first draw**: the save screen centres
   labels on it the moment a sprite is made (`yagasprite._estimate_rect`).
 
