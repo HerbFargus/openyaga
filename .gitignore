@@ -23,7 +23,7 @@
 !LICENSE
 !tools/
 !player/
-# One illustrative screenshot for the README.
+# The README's screenshot, and write-ups such as VOICE.md.
 !docs/
 
 # Reconstructed game source: a derivative work of the original program.

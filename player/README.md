@@ -265,7 +265,9 @@ comes from the Bink file and keeps its own timing. Lip-sync and subtitles
 still follow the game's own timing data, so a replacement should run about
 as long as the line it replaces. A recording names the voice pack it was
 made with, and its replay needs the same one. No voice pack ships with
-openyaga, and none belongs in this repository.
+openyaga, and none belongs in this repository. [docs/VOICE.md](../docs/VOICE.md)
+describes how to make one: training a model on a character's voice from the
+earlier games and re-voicing their lines, cutscenes included.
 
 ## Recording and replaying: the trace as an oracle
 

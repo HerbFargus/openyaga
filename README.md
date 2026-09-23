@@ -84,6 +84,12 @@ everything without `sudo`, tested on a stock Ubuntu -- and **record and
 replay** (`--record`, `--replay`) reproduce a session's engine calls exactly,
 even from Windows to Linux.
 
+**Voice packs** (`--voice-pack`) replace any spoken line or movie
+soundtrack with your own. [docs/VOICE.md](docs/VOICE.md) is a write-up of
+using one to give Pajama Sam 4's Sam back his voice from the first three
+games -- a voice model trained on the old lines -- and of how to do the same
+for Putt-Putt or anyone else recast.
+
 See [player/README.md](player/README.md) for the design.
 
 ## What doesn't work yet
